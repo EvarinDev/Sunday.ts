@@ -22,7 +22,6 @@
   },
   // Include the eslint.config.js explicitly
   "include": [
-    "src/**/*", // Adjust as needed to target your source files
-    "eslint.config.js" // Include the eslint config explicitly
+      "src/**/*" // Adjust as needed to target your source files
   ]
 }
