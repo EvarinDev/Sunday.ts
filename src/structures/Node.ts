@@ -13,7 +13,7 @@ import {
   WebSocketClosedEvent,
 } from "./Utils";
 import { NodeOptions, NodeStats } from "../types/Node";
-import { Rest, ModifyRequest } from "./Rest";
+import { Rest } from "./Rest";
 
 function check(options: NodeOptions) {
   if (!options) throw new TypeError("NodeOptions must not be empty.");
@@ -158,18 +158,13 @@ export class Node {
   /** Connects to the Node. */
   public connect(): void {
     if (this.connected) return;
-
     const headers = {
       Authorization: this.options.password,
       "Num-Shards": String(this.manager.options.shards),
       "User-Id": this.manager.options.clientId,
       "Client-Name": this.manager.options.clientName,
     };
-    if (this.options.version === "v4") {
-      this.socket = new WebSocket(`ws${this.options.secure ? "s" : ""}://${this.address}/v4/websocket`, { headers });
-    } else {
-      this.socket = new WebSocket(`ws${this.options.secure ? "s" : ""}://${this.address}/websocket`, { headers });
-    }
+    this.socket = new WebSocket(`ws${this.options.secure ? "s" : ""}://${this.address}${this.options.version === "v4" ? "/v4/websocket" : "/"}`, { headers });
     this.socket.on("open", this.open.bind(this));
     this.socket.on("close", this.close.bind(this));
     this.socket.on("message", this.message.bind(this));

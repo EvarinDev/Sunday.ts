@@ -17,8 +17,6 @@ import { TypedEmitter } from "tiny-typed-emitter";
 import { ManagerEventEmitter } from "../types/Manager";
 import { NodeOptions } from "../types/Node";
 
-const REQUIRED_KEYS = ["event", "guildId", "op", "sessionId"];
-
 function check(options: ManagerOptions) {
     if (!options) throw new TypeError("ManagerOptions must not be empty.");
 
@@ -117,9 +115,7 @@ export class Manager extends TypedEmitter<ManagerEventEmitter> {
      */
     constructor(options: ManagerOptions) {
         super();
-
         check(options);
-
         Structure.get("Player").init(this);
         Structure.get("Node").init(this);
         TrackUtils.init(this);
@@ -150,9 +146,8 @@ export class Manager extends TypedEmitter<ManagerEventEmitter> {
         }
 
         if (this.options.nodes) {
-            this.options.nodes.forEach((nodeOptions, index) => {
-                const node = new (Structure.get("Node"))(nodeOptions);
-                this.nodes.set(index.toString(), node);
+            this.options.nodes.forEach((nodeOptions) => {
+                return new (Structure.get("Node"))(nodeOptions);
             });
         }
     }
@@ -403,7 +398,7 @@ export type SearchPlatform = "youtube" | "youtube music" | "soundcloud";
 
 export interface SearchQuery {
     /** The source to search from. */
-    source?: SearchPlatform | string;
+    source?: SearchPlatform;
     /** The query to search for. */
     query: string;
 }
