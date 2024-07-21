@@ -1,26 +1,29 @@
-/* The `interface RestEventEmitter` in the TypeScript code snippet is defining a structure for an event
-emitter related to a REST service. It specifies the types of functions that can be included in an
-object implementing the `RestEventEmitter` interface. */
-interface RestEventEmitter {
-    ready: () => void;
-    raw: (data: unknown) => void;
-    get: (data: unknown) => void;
-    error: (error: Error) => void;
-    post: (data: unknown) => void;
-    patch: (data: unknown) => void;
-}
-
-/* The `interface RestConfig` in the TypeScript code snippet defines a structure for configuration
-settings related to a REST service. It specifies the properties that can be included in a
-`RestConfig` object, which are: */
-interface RestConfig {
-    host: string;
-    port: number;
-    password: string;
-    secure?: boolean;
-}
-
-export type {
-    RestEventEmitter,
-    RestConfig
+export interface PlayOptionsData {
+	guildId: string;
+	data: {
+		/** The base64 encoded track. */
+		encodedTrack?: string;
+		/** The track ID. */
+		identifier?: string;
+		/** The track time to start at. */
+		startTime?: number;
+		/** The track time to end at. */
+		endTime?: number;
+		/** The player volume level. */
+		volume?: number;
+		/** The player position in a track. */
+		position?: number;
+		/** Whether the player is paused. */
+		paused?: boolean;
+		/** The audio effects. */
+		filters?: object;
+		/** voice payload. */
+		voice?: {
+			token: string;
+			sessionId: string;
+			endpoint: string;
+		};
+		/** Whether to not replace the track if a play payload is sent. */
+		noReplace?: boolean;
+	};
 }

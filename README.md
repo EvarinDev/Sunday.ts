@@ -29,7 +29,7 @@
 - [🎈 Usage ](#-usage-)
 - [🚀 Deployment ](#-deployment-)
 - [⛏️ Built Using ](#️-built-using-)
-- [✍️ Authors ](#️-authors-)
+- [Credits](#credits)
 
 ## 🧐 About <a name = "about"></a>
 
@@ -62,25 +62,7 @@ That's it! You have successfully installed Sunday.ts and are ready to start usin
 ## 🎈 Usage <a name="usage"></a>
 
 ```ts
-import { Node } from "sunday.ts"
-const node = new Node({
-    host: 'localhost',
-    port: 2333,
-    password: 'youshallnotpass',
-});
 
-node.on("ready", () => {
-    console.log("Ready");
-});
-node.on("stats", () => {
-    console.log(node.stats);
-});
-node.on("raw", (data) => {
-    console.log(data);
-});
-node.connect();
-node.rest?.on("get", (data) => console.log(data));
-node.rest?.get("/loadtracks?identifier=dQw4w9WgXcQ")
 ```
 
 ## 🚀 Deployment <a name = "deployment"></a>
@@ -91,9 +73,8 @@ Add additional notes about how to deploy this on a live system.
 
 - [WebSocket](https://github.com/websockets/ws) - WebSocket Client
 - [Axios](https://github.com/axios/axios) - HTTP Request
+## Credits
 
-## ✍️ Authors <a name = "authors"></a>
-
-- [FAYStarNext](https://github.com/FAYStarNext) - Idea & Initial work
+- [Erela.Js](https://github.com/MenuDocs/erela.js)
 
 See also the list of [contributors](https://github.com/FAYStarNext/Sunday.ts/contributors) who participated in this project.
