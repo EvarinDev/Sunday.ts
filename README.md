@@ -27,7 +27,6 @@
   - [Installing](#installing)
 - [Features](#features)
 - [🎈 Usage ](#-usage-)
-- [🚀 Deployment ](#-deployment-)
 - [⛏️ Built Using ](#️-built-using-)
 - [Credits](#credits)
 
@@ -64,10 +63,6 @@ That's it! You have successfully installed Sunday.ts and are ready to start usin
 ```ts
 
 ```
-
-## 🚀 Deployment <a name = "deployment"></a>
-
-Add additional notes about how to deploy this on a live system.
 
 ## ⛏️ Built Using <a name = "built_using"></a>
 
