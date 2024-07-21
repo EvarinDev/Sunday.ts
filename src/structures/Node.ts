@@ -13,7 +13,7 @@ import {
   WebSocketClosedEvent,
 } from "./Utils";
 import { NodeOptions, NodeStats } from "../types/Node";
-import { Rest, ModifyRequest } from "./Rest";
+import { Rest } from "./Rest";
 
 function check(options: NodeOptions) {
   if (!options) throw new TypeError("NodeOptions must not be empty.");

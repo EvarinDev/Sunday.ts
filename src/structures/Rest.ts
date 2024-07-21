@@ -1,4 +1,4 @@
-import { Dispatcher, Pool } from "undici";
+import { Dispatcher } from "undici";
 import { NodeOptions } from "../types/Node";
 import axios, { AxiosInstance } from "axios";
 import { PlayOptionsData } from "../types/Rest";

@@ -17,8 +17,6 @@ import { TypedEmitter } from "tiny-typed-emitter";
 import { ManagerEventEmitter } from "../types/Manager";
 import { NodeOptions } from "../types/Node";
 
-const REQUIRED_KEYS = ["event", "guildId", "op", "sessionId"];
-
 function check(options: ManagerOptions) {
     if (!options) throw new TypeError("ManagerOptions must not be empty.");
 
@@ -403,7 +401,7 @@ export type SearchPlatform = "youtube" | "youtube music" | "soundcloud";
 
 export interface SearchQuery {
     /** The source to search from. */
-    source?: SearchPlatform | string;
+    source?: SearchPlatform;
     /** The query to search for. */
     query: string;
 }

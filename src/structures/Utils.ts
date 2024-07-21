@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars, @typescript-eslint/no-var-requires*/
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-var-requires*/
 import { NodeStats } from "../types/Node";
 import { Manager } from "./Manager";
 import { Node } from "./Node";

@@ -1,4 +1,3 @@
-import { Pool } from "undici";
 export interface NodeOptions {
     /** The host for the node. */
     host: string;
