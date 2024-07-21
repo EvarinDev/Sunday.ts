@@ -150,8 +150,10 @@ export class Manager extends TypedEmitter<ManagerEventEmitter> {
         }
 
         if (this.options.nodes) {
-            for (const nodeOptions of this.options.nodes)
-                new (Structure.get("Node"))(nodeOptions);
+            this.options.nodes.forEach((nodeOptions, index) => {
+                const node = new (Structure.get("Node"))(nodeOptions);
+                this.nodes.set(index.toString(), node);
+            });
         }
     }
 
@@ -189,28 +191,28 @@ export class Manager extends TypedEmitter<ManagerEventEmitter> {
      * @param requester
      * @returns The search result.
      */
-    public search(
+    public async search(
         query: string | SearchQuery,
         requester?: unknown
     ): Promise<SearchResult> {
-        return new Promise(async (resolve, reject) => {
-            const node = this.leastUsedNodes.first();
-            if (!node) throw new Error("No available nodes.");
-
-            const _query: SearchQuery = typeof query === "string" ? { query } : query;
-            const _source = Manager.DEFAULT_SOURCES[_query.source ?? this.options.defaultSearchPlatform] ?? _query.source;
-
-            let search = _query.query;
-            if (!/^https?:\/\//.test(search)) {
-                search = `${_source}:${search}`;
-            }
-
-            const res = await node.rest.get(`/loadtracks?identifier=${encodeURIComponent(search)}`)
-
+        const node = this.leastUsedNodes.first();
+        if (!node) throw new Error("No available nodes.");
+    
+        const _query: SearchQuery = typeof query === "string" ? { query } : query;
+        const _source = Manager.DEFAULT_SOURCES[_query.source ?? this.options.defaultSearchPlatform] ?? _query.source;
+    
+        let search = _query.query;
+        if (!/^https?:\/\//.test(search)) {
+            search = `${_source}:${search}`;
+        }
+    
+        try {
+            const res = await node.rest.get(`/loadtracks?identifier=${encodeURIComponent(search)}`);
+    
             if (!res) {
-                return reject(new Error("Query not found."));
+                throw new Error("Query not found.");
             }
-
+    
             const result: SearchResult = {
                 loadType: res.loadType,
                 exception: res.exception ?? null,
@@ -218,7 +220,7 @@ export class Manager extends TypedEmitter<ManagerEventEmitter> {
                     TrackUtils.build(track, requester)
                 ) ?? [],
             };
-
+    
             if (result.loadType === "PLAYLIST_LOADED") {
                 result.playlist = {
                     name: res.playlistInfo.name,
@@ -231,11 +233,12 @@ export class Manager extends TypedEmitter<ManagerEventEmitter> {
                         .reduce((acc: number, cur: Track) => acc + (cur.duration || 0), 0),
                 };
             }
-
-            return resolve(result);
-        });
-    }
-
+    
+            return result;
+        } catch (error) {
+            throw new Error(`Search failed: ${error.message}`);
+        }
+    }    
     /**
      * Decodes the base64 encoded tracks and returns a TrackData array.
      * @param tracks
@@ -248,7 +251,7 @@ export class Manager extends TypedEmitter<ManagerEventEmitter> {
             if (!res) {
                 return reject(new Error("No data returned from query."));
             }
-            return resolve(res);
+            return res;
         });
     }
 
