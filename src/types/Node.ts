@@ -5,6 +5,8 @@ interface NodeEventEmitter {
     raw: (data: unknown) => void;
     stats: (stats: NodeStats) => void;
     connect: () => void;
+    error(error: Error): void;
+    disconnect: (data: unknown) => void;
 }
 
 /* The `interface NodeConfig` is defining a structure for configuring a Node. It specifies the
@@ -16,13 +18,22 @@ interface NodeConfig {
     port: number;
     password: string;
     secure?: boolean;
+    clientName?: string;
+    version?: number;
+    priority?: number;
+    resumeStatus?: string;
+    resumeTimeout?: number;
 }
 
 /* The `interface NodeStats` is defining a structure for representing statistical data related to a
 Node. It includes various properties such as `frameStats`, `players`, `playingPlayers`, `uptime`,
 `memory`, and `cpu`. Each property has a specific data type associated with it: */
 interface NodeStats {
-    frameStats: string | null,
+    frameStats: {
+        sent: number,
+        nulled: number,
+        deficit: number
+    },
     players: number,
     playingPlayers: number,
     uptime: number,

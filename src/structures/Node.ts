@@ -2,6 +2,7 @@ import { TypedEmitter } from "tiny-typed-emitter";
 import { WebSocket } from "ws";
 import type { NodeConfig, NodeEventEmitter, NodeStats } from "../types/Node";
 import { Rest } from "./Rest";
+import type { Manager } from "./Manager";
 
 /* This TypeScript class extends TypedEmitter with a generic type of NodeEventEmitter. */
 export class Node extends TypedEmitter<NodeEventEmitter> {
@@ -23,11 +24,14 @@ export class Node extends TypedEmitter<NodeEventEmitter> {
     property can hold a value of type `NodeStats` (defined elsewhere in the codebase) or it can be
     `null` if no value is assigned to it. */
     public stats: NodeStats | null = null;
+    /* The line `session_id: string | null = null;` in the Node class is declaring a public property
+    named `session_id` with a type of `string` or `null`. This means that the `session_id` property
+    can hold a value of type `string`, representing a session identifier, or it can be `null` if no
+    value is assigned to it. */
     session_id: string | null = null;
     /* The line `public rest: Rest | null = null;` in the Node class is declaring a public property
     named `rest` of type `Rest` or `null`. */
     public rest: Rest | null = null;
-
     /**
      * The function checks if a WebSocket connection is open and returns a boolean value accordingly.
      * @returns The `get connected` method returns a boolean value indicating whether the WebSocket
@@ -38,6 +42,8 @@ export class Node extends TypedEmitter<NodeEventEmitter> {
         if (!this.socket) return false;
         return this.socket.readyState === WebSocket.OPEN;
     }
+    /* The line `private static _manager: Manager;` in the Node class is declaring a private static
+    property named `_manager` with a type of `Manager`. */
     /**
      * The constructor initializes a Rest object with the provided NodeConfig options.
      * @param {NodeConfig} options - The `options` parameter is an object that contains configuration
@@ -47,11 +53,7 @@ export class Node extends TypedEmitter<NodeEventEmitter> {
     constructor(options: NodeConfig) {
         super();
         this.options = options;
-        this.rest = new Rest({
-            host: options.host,
-            password: options.password,
-            port: options.port,
-        })
+        this.rest = new Rest(this);
     }
     /**
      * The `connect` function establishes a WebSocket connection with specified headers and event
@@ -63,18 +65,18 @@ export class Node extends TypedEmitter<NodeEventEmitter> {
         if (this.connected) return;
         const headers = Object.assign({
             "Authorization": this.options.password,
-            "Client-Name": "Lavalink",
+            "Client-Name": this.options.clientName || `Sunday.ts/${require("../../package.json").version}`,
             "User-Id": "213",
         })
         this.socket = new WebSocket(`ws${this.options.secure ? "s" : ""}://${this.options.host}:${this.options.port}/v4/websocket`, { headers });
         this.socket.on("open", () => {
             this.emit("connect");
         });
-        this.socket.on("close", () => {
-            console.log("Connection closed");
+        this.socket.on("close", (data) => {
+            this.emit("disconnect", data);
         });
         this.socket.on("error", (error) => {
-            console.error(error);
+            this.emit("error", error);
         });
         this.socket.on("message", this.onMessage.bind(this));
     }
@@ -92,8 +94,16 @@ export class Node extends TypedEmitter<NodeEventEmitter> {
         this.emit("raw", payload);
         switch (payload?.op) {
             case "ready": {
-                this.session_id = payload.session_id;
-                this.emit("ready");
+                this.rest.setSessionId(payload.sessionId);
+				this.session_id = payload.sessionId;
+
+				if (this.options.resumeStatus) {
+					this.rest.patch(`/v4/sessions/${this.session_id}`, {
+						resuming: this.options.resumeStatus,
+						timeout: this.options.resumeTimeout,
+					});
+				}
+                this.emit("ready")
                 break;
             }
             case "stats": {
@@ -102,5 +112,8 @@ export class Node extends TypedEmitter<NodeEventEmitter> {
                 break;
             }
         }
+    }
+    private debug(message: string) {
+        return this.emit("raw",  message);
     }
 }

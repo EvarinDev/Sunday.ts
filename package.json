@@ -8,7 +8,9 @@
   "scripts": {
     "build:js": "npx babel src --out-dir dist --extensions \".ts,.tsx\" --source-maps inline",
     "lint": "npx x eslint src/**/*.ts",
-    "test:connect": "bun test/connect.ts"
+    "test:connect": "bun test/connect.ts",
+    "test:manager": "bun test/manager.ts",
+    "test:player": "bun test/player.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.7.0",
@@ -30,7 +32,9 @@
     "@babel/plugin-proposal-class-properties": "^7.18.6",
     "@babel/preset-env": "^7.24.8",
     "@babel/preset-typescript": "^7.24.7",
+    "@discordjs/collection": "^2.1.0",
     "axios": "^1.7.2",
+    "discord.js": "^14.15.3",
     "tiny-typed-emitter": "^2.1.0",
     "ws": "^8.18.0"
   }

@@ -1,6 +1,8 @@
 import { TypedEmitter } from "tiny-typed-emitter";
 import type { RestConfig, RestEventEmitter } from "../types/Rest";
 import axios, { type AxiosInstance } from "axios";
+import type { Node } from "./Node";
+import type { PlayOptions } from "../types/Player";
 
 export class Rest extends TypedEmitter<RestEventEmitter> {
     /* The line `public req: AxiosInstance` in the TypeScript class `Rest` is declaring a public
@@ -20,16 +22,25 @@ export class Rest extends TypedEmitter<RestEventEmitter> {
      * object of type `RestConfig`. It likely contains configuration options for making REST API
      * requests. Some of the properties in the `options` object could include:
      */
-    constructor(options: RestConfig) {
+    /** The Node that this Rest instance is connected to. */
+	private node: Node;
+	/** The ID of the current session. */
+	private sessionId: string;
+	/** The password for the Node. */
+	private readonly password: string;
+	/** The URL of the Node. */
+
+	constructor(node: Node) {
         super();
-        this.config = options;
-        this.req = axios.create({
-            baseURL: `http${options.secure ? "s" : ""}://${options.host}:${options.port}/v4`,
+		this.node = node;
+		this.req = axios.create({
+            baseURL: `http${node.options.secure ? "s" : ""}://${node.options.host}:${node.options.port}/v4`,
             headers: {
-                "Authorization": options.password,
+                "Authorization": node.options.password
             }
         });
-    }
+		this.password = node.options.password;
+	}
     /**
      * The function `get` sends a GET request to a specified path and emits events based on the response
      * or error.
@@ -65,4 +76,19 @@ export class Rest extends TypedEmitter<RestEventEmitter> {
             this.emit("error", err);
         });
     }
+    public async updatePlayer(options: PlayOptions): Promise<unknown> {
+		return await this.patch(`/sessions/${this.sessionId}/players/${options.guildId}?noReplace=false`, options.data);
+	}
+    public async patch(path: string, data: any) {
+        this.req.patch(path, data).then((res) => {
+            this.emit("patch", res.data);
+            return res.data;
+        }).catch((err) => {
+            this.emit("error", err);
+        });
+    }
+    public setSessionId(sessionId: string): string {
+		this.sessionId = sessionId;
+		return this.sessionId;
+	}
 }

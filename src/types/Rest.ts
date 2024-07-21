@@ -7,6 +7,7 @@ interface RestEventEmitter {
     get: (data: unknown) => void;
     error: (error: Error) => void;
     post: (data: unknown) => void;
+    patch: (data: unknown) => void;
 }
 
 /* The `interface RestConfig` in the TypeScript code snippet defines a structure for configuration
