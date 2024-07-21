@@ -3,6 +3,8 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
+  "version": "1.0.0-indev",
+  "description": "Sunday a lavalink wrapper",
   "scripts": {
     "build:js": "npx babel src --out-dir dist --extensions \".ts,.tsx\" --source-maps inline",
     "lint": "npx x eslint src/**/*.ts",
@@ -14,6 +16,10 @@
     "eslint": "9.x",
     "globals": "^15.8.0",
     "typescript-eslint": "^7.16.1"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
   },
   "peerDependencies": {
     "typescript": "^5.5.3"
