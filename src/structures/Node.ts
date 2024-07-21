@@ -165,7 +165,6 @@ export class Node {
       "User-Id": this.manager.options.clientId,
       "Client-Name": this.manager.options.clientName,
     };
-    console.log(headers);
     if (this.options.version === "v4") {
       this.socket = new WebSocket(`ws${this.options.secure ? "s" : ""}://${this.address}/v4/websocket`, { headers });
     } else {
