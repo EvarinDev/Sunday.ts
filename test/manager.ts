@@ -7,11 +7,6 @@ let client = new Manager({
             port: 2333,
             password: 'youshallnotpass',
         },
-        {
-            host: "ether.lunarnodes.xyz",
-            port: 6969,
-            password: "lunarnodes.xyz",
-        }
     ],
     clientId: "1234567890",
     send(guild_id, payload) {
