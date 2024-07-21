@@ -115,9 +115,7 @@ export class Manager extends TypedEmitter<ManagerEventEmitter> {
      */
     constructor(options: ManagerOptions) {
         super();
-
         check(options);
-
         Structure.get("Player").init(this);
         Structure.get("Node").init(this);
         TrackUtils.init(this);
@@ -148,9 +146,8 @@ export class Manager extends TypedEmitter<ManagerEventEmitter> {
         }
 
         if (this.options.nodes) {
-            this.options.nodes.forEach((nodeOptions, index) => {
-                const node = new (Structure.get("Node"))(nodeOptions);
-                this.nodes.set(index.toString(), node);
+            this.options.nodes.forEach((nodeOptions) => {
+                return new (Structure.get("Node"))(nodeOptions);
             });
         }
     }
