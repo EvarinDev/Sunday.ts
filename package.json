@@ -3,7 +3,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
-  "version": "1.0.0-indev",
+  "version": "1.0.1-indev",
   "description": "Sunday a lavalink wrapper",
   "scripts": {
     "build:js": "npx babel src --out-dir dist --extensions \".ts,.tsx\" --source-maps inline",

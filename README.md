@@ -57,7 +57,6 @@ That's it! You have successfully installed Sunday.ts and are ready to start usin
 
 ## Features
 - [ ] Multi version
-- [ ] Player
 - [ ] Plugin
 
 ## 🎈 Usage <a name="usage"></a>
