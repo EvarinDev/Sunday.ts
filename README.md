@@ -95,6 +95,6 @@ Add additional notes about how to deploy this on a live system.
 
 ## ✍️ Authors <a name = "authors"></a>
 
-- [@FAYStarNext](hhttps://github.com/FAYStarNext) - Idea & Initial work
+- [FAYStarNext](https://github.com/FAYStarNext) - Idea & Initial work
 
 See also the list of [contributors](https://github.com/FAYStarNext/Sunday.ts/contributors) who participated in this project.
