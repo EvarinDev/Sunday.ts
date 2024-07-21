@@ -1,52 +1,116 @@
-import type { Node } from "../structures/Node";
-import type { Player } from "../structures/Player";
-import type { NodeConfig, NodeStats } from "./Node";
+import { Node } from "../structures/Node";
+import { Player, Track, UnresolvedTrack } from "../structures/Player";
+import { TrackEndEvent, TrackExceptionEvent, TrackStartEvent, TrackStuckEvent, WebSocketClosedEvent } from "../structures/Utils";
 
-/* The `ManagerEventEmitter` interface is defining a set of event listener functions that can be used
-to handle various events related to nodes and players in a manager system. Each property in the
-interface represents a specific event type along with the expected parameters and return type of the
-event handler function. */
-interface ManagerEventEmitter {
-    NodeConnect: (node: Node) => void;
-    NodeDisconnect: (node: Node) => void;
-    NodeError: (node: Node, error: Error) => void;
-    NodeStats: (node: Node, stats: NodeStats) => void;
+export interface ManagerEventEmitter {
     NodeReady: (node: Node) => void;
-    NodeRaw: (node: Node, data: unknown) => void;
+    /**
+     * Emitted when a Node is created.
+     * @event Manager#NodeCreate
+     */
+    NodeCreate: (node: Node) => void;
+
+    /**
+     * Emitted when a Node is destroyed.
+     * @event Manager#NodeDestroy
+     */
+    NodeDestroy: (node: Node) => void;
+
+    /**
+     * Emitted when a Node connects.
+     * @event Manager#NodeConnect
+     */
+    NodeConnect: (node: Node) => void;
+
+    /**
+     * Emitted when a Node reconnects.
+     * @event Manager#NodeReconnect
+     */
+    NodeReconnect: (node: Node) => void;
+
+    /**
+     * Emitted when a Node disconnects.
+     * @event Manager#NodeDisconnect
+     */
+    NodeDisconnect: (node: Node, reason: { code: number; reason: string }) => void;
+
+    /**
+     * Emitted when a Node has an error.
+     * @event Manager#NodeError
+     */
+    NodeError: (node: Node, error: Error) => void;
+
+    /**
+     * Emitted whenever any Lavalink event is received.
+     * @event Manager#NodeRaw
+     */
+    NodeRaw: (payload: unknown) => void;
+
+    /**
+     * Emitted when a player is created.
+     * @event Manager#playerCreate
+     */
     PlayerCreate: (player: Player) => void;
+
+    /**
+     * Emitted when a player is destroyed.
+     * @event Manager#playerDestroy
+     */
     PlayerDestroy: (player: Player) => void;
-    PlayerConnect: (player: Player) => void;
-    PlayerDisconnect: (player: Player, voiceChannel: string) => void;
-    PlayerError: (player: Player, error: Error) => void;
-    PlayerUpdate: (player: Player, state: unknown) => void;
-    PlayerVoiceUpdate: (player: Player, state: unknown) => void;
-    PlayerMove: (player: Player, oldChannel: string, newChannel: string) => void;
-    PlayerStateUpdate: (player: Player, state: unknown) => void;
-    raw: (data: unknown) => void;
-}
 
-interface Payload {
-    op: number;
-    d: {
-        guild_id: string;
-        channel_id: string;
-        self_mute: boolean;
-        self_deaf: boolean;
-    }
-}
+    /**
+     * Emitted when a player queue ends.
+     * @event Manager#queueEnd
+     */
+    QueueEnd: (
+        player: Player,
+        track: Track | UnresolvedTrack,
+        payload: TrackEndEvent
+    ) => void;
 
-/* The `ManagerOptions` interface is defining a set of properties that can be used when creating an
-instance of a manager. Here's what each property does: */
-interface ManagerOptions {
-    nodes: NodeConfig[];
-    clientName?: string;
-    usePriority?: boolean;
-    clientId: string;
-    useNode?: "leastLoad" | "leastPlayers";
-    send: (guild_id: string, payload: Payload) => void;
-}
+    /**
+     * Emitted when a player is moved to a new voice channel.
+     * @event Manager#playerMove
+     */
+    PlayerMove: (player: Player, initChannel: string, newChannel: string) => void;
 
-export type {
-    ManagerEventEmitter,
-    ManagerOptions
+    /**
+     * Emitted when a player is disconnected from it's current voice channel.
+     * @event Manager#playerDisconnect
+     */
+    PlayerDisconnect: (player: Player, oldChannel: string) => void;
+
+    /**
+     * Emitted when a track starts.
+     * @event Manager#trackStart
+     */
+    TrackStart: (player: Player, track: Track, payload: TrackStartEvent) => void;
+
+    /**
+     * Emitted when a track ends.
+     * @event Manager#trackEnd
+     */
+    TrackEnd: (player: Player, track: Track, payload: TrackEndEvent) => void;
+
+    /**
+     * Emitted when a track gets stuck during playback.
+     * @event Manager#trackStuck
+     */
+    TrackStuck: (player: Player, track: Track, payload: TrackStuckEvent) => void;
+
+    /**
+     * Emitted when a track has an error during playback.
+     * @event Manager#trackError
+     */
+    TrackError: (
+        player: Player,
+        track: Track | UnresolvedTrack,
+        payload: TrackExceptionEvent
+    ) => void;
+
+    /**
+     * Emitted when a voice connection is closed.
+     * @event Manager#socketClosed
+     */
+    SocketClosed: (player: Player, payload: WebSocketClosedEvent) => void;
 }

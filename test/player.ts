@@ -16,6 +16,7 @@ let manager = new Manager({
             host: 'localhost',
             port: 2333,
             password: 'youshallnotpass',
+            version: "v4",
         },
     ],
     clientId: "1234567890",
@@ -29,27 +30,30 @@ let manager = new Manager({
 manager.on("NodeConnect", (node) => {
     console.log(`Node ${node.options.host} connected`);
 });
-manager.on("NodeRaw", async (node, data) => {
-    console.log(`Node ${node.options.host} sent raw data: ${JSON.stringify(data)}`);
-});
-manager.on("raw", (data) => {
-    console.log(data);
+manager.on("NodeRaw", async (node) => {
+    console.log(`sent raw data: ${JSON.stringify(node)}`);
 });
 client.on("ready", () => {
     manager.init();
 });
 manager.on("PlayerCreate", (player) => {
-    console.log(`Player created in guild ${player.guild_id}`);
+    console.log(`Player created in guild ${player.guild}`);
 });
-client.on("messageCreate", (message) => {
+manager.on("NodeError" , (node, error) => {
+    console.log(`Node ${node.options.host} has an error: ${error.message}`);
+});
+client.on("messageCreate", async (message) => {
     console.log(message.content)
-    message.content === "message" && manager.create({
-        voiceChannel: message.member?.voice.channel?.id as string,
-        textChannel: message.channel.id,
-        guild_id: message.guild?.id as string,
-        selfDeafen: true,
-        selfMute: false,
-    }).connect();
+    if (message.content === "message") {
+        let player = manager.create({
+            voiceChannel: message.member?.voice.channel?.id as string,
+            textChannel: message.channel.id,
+            guild: message.guild?.id as string,
+            selfDeafen: true,
+            selfMute: false,
+        })
+        if (player.state !== "CONNECTED") await player.connect();
+    }
 })
 client.on("raw", (data) => manager.updateVoiceState(data));
 client.login("");

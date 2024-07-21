@@ -17,10 +17,7 @@ let client = new Manager({
 client.on("NodeConnect", (node) => {
     console.log(`Node ${node.options.host} connected`);
 });
-client.on("NodeRaw", async (node, data) => {
-    console.log(`Node ${node.options.host} sent raw data: ${JSON.stringify(data)}`);
-});
-client.on("raw", (data) => {
-    console.log(data);
+client.on("NodeRaw", (node) => {
+    console.log(node)
 });
 client.init()

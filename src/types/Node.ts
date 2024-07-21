@@ -1,57 +1,68 @@
-/* The `interface NodeEventEmitter` is defining a structure for an object that can emit specific events
-related to a Node. It specifies four event types along with their corresponding callback functions: */
-interface NodeEventEmitter {
-    ready: () => void;
-    raw: (data: unknown) => void;
-    stats: (stats: NodeStats) => void;
-    connect: () => void;
-    error(error: Error): void;
-    disconnect: (data: unknown) => void;
-}
-
-/* The `interface NodeConfig` is defining a structure for configuring a Node. It specifies the
-properties that can be set for a Node, including the host (as a string), port (as a number),
-password (as a string), and an optional property secure (as a boolean). This interface provides a
-blueprint for creating objects that hold configuration settings for a Node. */
-interface NodeConfig {
+import { Pool } from "undici";
+export interface NodeOptions {
+    /** The host for the node. */
     host: string;
-    port: number;
-    password: string;
+    /** The port for the node. */
+    port?: number;
+    /** The password for the node. */
+    password?: string;
+    /** Whether the host uses SSL. */
     secure?: boolean;
-    clientName?: string;
-    version?: number;
-    priority?: number;
-    resumeStatus?: string;
+    /** The identifier for the node. */
+    identifier?: string;
+    /** The version for the node. */
+    version?: "v4" | "v3";
+    /** The retryAmount for the node. */
+    retryAmount?: number;
+    /** The retryDelay for the node. */
+    retryDelay?: number;
+    /** The timeout used for api calls */
+    requestTimeout?: number;
+    resumeStatus?: boolean;
     resumeTimeout?: number;
+
 }
 
-/* The `interface NodeStats` is defining a structure for representing statistical data related to a
-Node. It includes various properties such as `frameStats`, `players`, `playingPlayers`, `uptime`,
-`memory`, and `cpu`. Each property has a specific data type associated with it: */
-interface NodeStats {
-    frameStats: {
-        sent: number,
-        nulled: number,
-        deficit: number
-    },
-    players: number,
-    playingPlayers: number,
-    uptime: number,
-    memory: {
-        free: number,
-        used: number,
-        allocated: number,
-        reservable: number,
-    },
-    cpu: {
-        cores: number,
-        systemLoad: number,
-        lavalinkLoad: number,
-    },
+export interface NodeStats {
+    /** The amount of players on the node. */
+    players: number;
+    /** The amount of playing players on the node. */
+    playingPlayers: number;
+    /** The uptime for the node. */
+    uptime: number;
+    /** The memory stats for the node. */
+    memory: MemoryStats;
+    /** The cpu stats for the node. */
+    cpu: CPUStats;
+    /** The frame stats for the node. */
+    frameStats: FrameStats;
 }
 
-export type {
-    NodeEventEmitter,
-    NodeConfig,
-    NodeStats
+export interface MemoryStats {
+    /** The free memory of the allocated amount. */
+    free: number;
+    /** The used memory of the allocated amount. */
+    used: number;
+    /** The total allocated memory. */
+    allocated: number;
+    /** The reservable memory. */
+    reservable: number;
+}
+
+export interface CPUStats {
+    /** The core amount the host machine has. */
+    cores: number;
+    /** The system load. */
+    systemLoad: number;
+    /** The lavalink load. */
+    lavalinkLoad: number;
+}
+
+export interface FrameStats {
+    /** The amount of sent frames. */
+    sent?: number;
+    /** The amount of nulled frames. */
+    nulled?: number;
+    /** The amount of deficit frames. */
+    deficit?: number;
 }
