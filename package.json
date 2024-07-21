@@ -5,6 +5,7 @@
   "type": "module",
   "version": "1.0.1-indev",
   "description": "Sunday a lavalink wrapper",
+  "license": "MIT",
   "scripts": {
     "build:js": "npx babel src --out-dir dist --extensions \".ts,.tsx\" --source-maps inline",
     "lint": "npx x eslint src/**/*.ts",
