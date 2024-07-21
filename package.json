@@ -1,6 +1,6 @@
 {
   "name": "sunday.ts",
-  "module": "dist/index.js",
+  "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
   "scripts": {
