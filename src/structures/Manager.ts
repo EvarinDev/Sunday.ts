@@ -464,7 +464,7 @@ export interface PlaylistData {
 }
 
 export interface ManagerEvents {
-	NodeCreate: (node: Node) => void;
+    NodeCreate: (node: Node) => void;
     NodeDestroy: (node: Node) => void;
     NodeConnect: (node: Node) => void;
     NodeReconnect: (node: Node) => void;

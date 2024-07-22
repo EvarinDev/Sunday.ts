@@ -157,7 +157,7 @@ client.login(process.env.TOKEN);
 ## ⛏️ Built Using <a name = "built_using"></a>
 
 - [WebSocket](https://github.com/websockets/ws) - WebSocket Client
-- [Axios](https://github.com/axios/axios) - HTTP Request
+- [node-fetch](https://github.com/node-fetch/node-fetch) - HTTP Request
 ## Credits
 
 - [Erela.Js](https://github.com/MenuDocs/erela.js)

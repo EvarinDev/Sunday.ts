@@ -2,7 +2,7 @@
   "name": "sunday.ts",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "version": "1.0.7-indev",
+  "version": "1.0.8-indev",
   "description": "Sunday a lavalink wrapper",
   "license": "MIT",
   "author": "FAYStarNext",
@@ -38,8 +38,8 @@
     "@babel/preset-env": "^7.24.8",
     "@babel/preset-typescript": "^7.24.7",
     "@discordjs/collection": "^2.1.0",
-    "axios": "^1.7.2",
     "discord.js": "^14.15.3",
+    "node-fetch": "^3.3.2",
     "tiny-typed-emitter": "^2.1.0",
     "ws": "^8.18.0"
   }
