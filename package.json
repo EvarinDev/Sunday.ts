@@ -3,7 +3,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
-  "version": "1.0.5-indev",
+  "version": "1.0.6-indev",
   "description": "Sunday a lavalink wrapper",
   "license": "MIT",
   "author": "FAYStarNext",
