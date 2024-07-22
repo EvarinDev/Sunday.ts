@@ -114,7 +114,7 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 			shards: 1,
 			autoPlay: true,
 			usePriority: false,
-			clientName: "Magmastream",
+			clientName: "Sunday.ts",
 			defaultSearchPlatform: "youtube",
 			useNode: "leastPlayers",
 			...options,
