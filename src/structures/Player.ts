@@ -143,17 +143,16 @@ export class Player {
 	public setEQ(...bands: EqualizerBand[]): this {
 		// Hacky support for providing an array
 		if (Array.isArray(bands[0])) bands = bands[0] as unknown as EqualizerBand[]
-
 		if (!bands.length || !bands.every((band) => JSON.stringify(Object.keys(band).sort((a, b) => a.localeCompare(b))) === '["band","gain"]'))
 			throw new TypeError("Bands must be a non-empty object array containing 'band' and 'gain' properties.");
 		for (const { band, gain } of bands) this.bands[band] = gain;
-
-		this.node.send({
-			op: "equalizer",
-			guildId: this.guild,
-			bands: this.bands.map((gain, band) => ({ band, gain })),
-		});
-
+		if (this.node.options.version === "v3") {
+			this.node.send({
+				op: "equalizer",
+				guildId: this.guild,
+				bands: this.bands.map((gain, band) => ({ band, gain })),
+			});
+		}
 		return this;
 	}
 

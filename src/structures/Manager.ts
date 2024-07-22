@@ -239,14 +239,14 @@ export class Manager extends TypedEmitter<ManagerEventEmitter> {
      * @param tracks
      */
     public decodeTracks(tracks: string[]): Promise<TrackData[]> {
-        return new Promise(async (resolve, reject) => {
+        return new Promise<TrackData[]>(async (resolve, reject) => {
             const node = this.nodes.first();
             if (!node) throw new Error("No available nodes.");
             const res = await node.rest.post(`/decodetracks`, JSON.stringify(tracks))
             if (!res) {
-                return reject(new Error("No data returned from query."));
+            return reject(new Error("No data returned from query."));
             }
-            return res;
+            resolve(res);
         });
     }
 

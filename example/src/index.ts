@@ -42,5 +42,18 @@ manager.on("PlayerCreate", (player) => {
 manager.on("NodeError" , (node, error) => {
     console.log(`Node ${node.options.host} has an error: ${error.message}`);
 });
+client.on("messageCreate", async (message) => {
+    console.log(message.content)
+    if (message.content === "message") {
+        let player = manager.create({
+            voiceChannel: message.member?.voice.channel?.id as string,
+            textChannel: message.channel.id,
+            guild: message.guild?.id as string,
+            selfDeafen: true,
+            selfMute: false,
+        })
+        if (player.state !== "CONNECTED") await player.connect();
+    }
+});
 client.on("raw", (data) => manager.updateVoiceState(data));
 client.login(process.env.TOKEN);
