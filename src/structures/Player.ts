@@ -1,55 +1,23 @@
+import { Filters } from "./Filters";
 import { Manager, SearchQuery, SearchResult } from "./Manager";
 import { Node } from "./Node";
 import { Queue } from "./Queue";
-import { Sizes, State, Structure, TrackUtils, VoiceState } from "./Utils";
-
-function check(options: PlayerOptions) {
-	if (!options) throw new TypeError("PlayerOptions must not be empty.");
-
-	if (!/^\d+$/.test(options.guild))
-		throw new TypeError(
-			'Player option "guild" must be present and be a non-empty string.'
-		);
-
-	if (options.textChannel && !/^\d+$/.test(options.textChannel))
-		throw new TypeError(
-			'Player option "textChannel" must be a non-empty string.'
-		);
-
-	if (options.voiceChannel && !/^\d+$/.test(options.voiceChannel))
-		throw new TypeError(
-			'Player option "voiceChannel" must be a non-empty string.'
-		);
-
-	if (options.node && typeof options.node !== "string")
-		throw new TypeError('Player option "node" must be a non-empty string.');
-
-	if (
-		typeof options.volume !== "undefined" &&
-		typeof options.volume !== "number"
-	)
-		throw new TypeError('Player option "volume" must be a number.');
-
-	if (
-		typeof options.selfMute !== "undefined" &&
-		typeof options.selfMute !== "boolean"
-	)
-		throw new TypeError('Player option "selfMute" must be a boolean.');
-
-	if (
-		typeof options.selfDeafen !== "undefined" &&
-		typeof options.selfDeafen !== "boolean"
-	)
-		throw new TypeError('Player option "selfDeafen" must be a boolean.');
-}
+import { Sizes, State, Structure, TrackSourceName, TrackUtils, VoiceState } from "./Utils";
+import * as _ from "lodash";
+import playerCheck from "../utils/playerCheck";
+import { ClientUser, Message, User } from "discord.js";
 
 export class Player {
 	/** The Queue for the Player. */
 	public readonly queue = new (Structure.get("Queue"))() as Queue;
+	/** The filters applied to the audio. */
+	public filters: Filters;
 	/** Whether the queue repeats the track. */
 	public trackRepeat = false;
 	/** Whether the queue repeats the queue. */
 	public queueRepeat = false;
+	/**Whether the queue repeats and shuffles after each song. */
+	public dynamicRepeat = false;
 	/** The time the player is in the track. */
 	public position = 0;
 	/** Whether the player is playing. */
@@ -66,17 +34,22 @@ export class Player {
 	public voiceChannel: string | null = null;
 	/** The text channel for the player. */
 	public textChannel: string | null = null;
+	/**The now playing message. */
+	public nowPlayingMessage?: Message;
 	/** The current state of the player. */
 	public state: State = "DISCONNECTED";
 	/** The equalizer bands array. */
 	public bands = new Array<number>(15).fill(0.0);
 	/** The voice state object from Discord. */
 	public voiceState: VoiceState;
-	public sessionId: string;
 	/** The Manager. */
 	public manager: Manager;
+	/** The autoplay state of the player. */
+	public isAutoplay: boolean = false;
+
 	private static _manager: Manager;
 	private readonly data: Record<string, unknown> = {};
+	private dynamicLoopInterval: NodeJS.Timeout | null = null;
 
 	/**
 	 * Set custom data.
@@ -107,21 +80,31 @@ export class Player {
 	constructor(public options: PlayerOptions) {
 		if (!this.manager) this.manager = Structure.get("Player")._manager;
 		if (!this.manager) throw new RangeError("Manager has not been initiated.");
+
 		if (this.manager.players.has(options.guild)) {
 			return this.manager.players.get(options.guild);
 		}
-		check(options);
+
+		playerCheck(options);
+
 		this.guild = options.guild;
-		this.voiceState = Object.assign({ op: "voiceUpdate", guildId: options.guild });
+		this.voiceState = Object.assign({
+			op: "voiceUpdate",
+			guild_id: options.guild,
+		});
+
 		if (options.voiceChannel) this.voiceChannel = options.voiceChannel;
 		if (options.textChannel) this.textChannel = options.textChannel;
+
 		const node = this.manager.nodes.get(options.node);
-		this.node = node || this.manager.leastLoadNodes.first();
+		this.node = node || this.manager.useableNodes;
+
 		if (!this.node) throw new RangeError("No available nodes.");
-		this.sessionId = this.node.sessionId;
+
 		this.manager.players.set(options.guild, this);
 		this.manager.emit("PlayerCreate", this);
 		this.setVolume(options.volume ?? 100);
+		this.filters = new Filters(this);
 	}
 
 	/**
@@ -129,51 +112,13 @@ export class Player {
 	 * @param query
 	 * @param requester
 	 */
-	public search(
-		query: string | SearchQuery,
-		requester?: unknown
-	): Promise<SearchResult> {
+	public search(query: string | SearchQuery, requester?: User | ClientUser): Promise<SearchResult> {
 		return this.manager.search(query, requester);
-	}
-
-	/**
-	 * Sets the players equalizer band on-top of the existing ones.
-	 * @param bands
-	 */
-	public setEQ(...bands: EqualizerBand[]): this {
-		// Hacky support for providing an array
-		if (Array.isArray(bands[0])) bands = bands[0] as unknown as EqualizerBand[]
-
-		if (!bands.length || !bands.every((band) => JSON.stringify(Object.keys(band).sort((a, b) => a.localeCompare(b))) === '["band","gain"]'))
-			throw new TypeError("Bands must be a non-empty object array containing 'band' and 'gain' properties.");
-		for (const { band, gain } of bands) this.bands[band] = gain;
-
-		this.node.send({
-			op: "equalizer",
-			guildId: this.guild,
-			bands: this.bands.map((gain, band) => ({ band, gain })),
-		});
-
-		return this;
-	}
-
-	/** Clears the equalizer bands. */
-	public clearEQ(): this {
-		this.bands = new Array(15).fill(0.0);
-
-		this.node.send({
-			op: "equalizer",
-			guildId: this.guild,
-			bands: this.bands.map((gain, band) => ({ band, gain })),
-		});
-
-		return this;
 	}
 
 	/** Connect to the voice channel. */
 	public connect(): this {
-		if (!this.voiceChannel)
-			throw new RangeError("No voice channel has been set.");
+		if (!this.voiceChannel) throw new RangeError("No voice channel has been set.");
 		this.state = "CONNECTING";
 
 		this.manager.options.send(this.guild, {
@@ -214,16 +159,12 @@ export class Player {
 	/** Destroys the player. */
 	public destroy(disconnect = true): void {
 		this.state = "DESTROYING";
+
 		if (disconnect) {
 			this.disconnect();
 		}
 
-		this.node.send({
-			op: "destroy",
-			guildId: this.guild,
-		});
 		this.node.rest.destroyPlayer(this.guild);
-
 		this.manager.emit("PlayerDestroy", this);
 		this.manager.players.delete(this.guild);
 	}
@@ -233,8 +174,7 @@ export class Player {
 	 * @param channel
 	 */
 	public setVoiceChannel(channel: string): this {
-		if (typeof channel !== "string")
-			throw new TypeError("Channel must be a non-empty string.");
+		if (typeof channel !== "string") throw new TypeError("Channel must be a non-empty string.");
 
 		this.voiceChannel = channel;
 		this.connect();
@@ -246,11 +186,18 @@ export class Player {
 	 * @param channel
 	 */
 	public setTextChannel(channel: string): this {
-		if (typeof channel !== "string")
-			throw new TypeError("Channel must be a non-empty string.");
+		if (typeof channel !== "string") throw new TypeError("Channel must be a non-empty string.");
 
 		this.textChannel = channel;
 		return this;
+	}
+
+	/** Sets the now playing message. */
+	public setNowPlayingMessage(message: Message): Message {
+		if (!message) {
+			throw new TypeError("You must provide the message of the now playing message.");
+		}
+		return (this.nowPlayingMessage = message);
 	}
 
 	/** Plays the next track. */
@@ -273,14 +220,9 @@ export class Player {
 	 * @param track
 	 * @param options
 	 */
-	public async play(
-		optionsOrTrack?: PlayOptions | Track | UnresolvedTrack,
-		playOptions?: PlayOptions
-	): Promise<void> {
-		if (
-			typeof optionsOrTrack !== "undefined" &&
-			TrackUtils.validate(optionsOrTrack)
-		) {
+	public async play(track: Track | UnresolvedTrack, options: PlayOptions): Promise<void>;
+	public async play(optionsOrTrack?: PlayOptions | Track | UnresolvedTrack, playOptions?: PlayOptions): Promise<void> {
+		if (typeof optionsOrTrack !== "undefined" && TrackUtils.validate(optionsOrTrack)) {
 			if (this.queue.current) this.queue.previous = this.queue.current;
 			this.queue.current = optionsOrTrack as Track;
 		}
@@ -289,11 +231,9 @@ export class Player {
 
 		const finalOptions = playOptions
 			? playOptions
-			: ["startTime", "endTime", "noReplace"].every((v) =>
-				Object.keys(optionsOrTrack || {}).includes(v)
-			)
-				? (optionsOrTrack as PlayOptions)
-				: {};
+			: ["startTime", "endTime", "noReplace"].every((v) => Object.keys(optionsOrTrack || {}).includes(v))
+			? (optionsOrTrack as PlayOptions)
+			: {};
 
 		if (TrackUtils.isUnresolvedTrack(this.queue.current)) {
 			try {
@@ -305,18 +245,35 @@ export class Player {
 			}
 		}
 
-		const options = {
-			op: "play",
+		await this.node.rest.updatePlayer({
 			guildId: this.guild,
-			track: this.queue.current.track,
-			...finalOptions,
-		};
+			data: {
+				encodedTrack: this.queue.current?.track,
+				...finalOptions,
+			},
+		});
 
-		if (typeof options.track !== "string") {
-			options.track = (options.track as Track).track;
+		Object.assign(this, { position: 0, playing: true });
+	}
+
+	/**
+	 * Sets the autoplay-state of the player.
+	 * @param autoplayState
+	 * @param botUser
+	 */
+	public setAutoplay(autoplayState: boolean, botUser: object) {
+		if (typeof autoplayState !== "boolean") {
+			throw new TypeError("autoplayState must be a boolean.");
 		}
 
-		await this.node.send(options);
+		if (typeof botUser !== "object") {
+			throw new TypeError("botUser must be a user-object.");
+		}
+
+		this.isAutoplay = autoplayState;
+		this.set("Internal_BotUser", botUser);
+
+		return this;
 	}
 
 	/**
@@ -324,16 +281,16 @@ export class Player {
 	 * @param volume
 	 */
 	public setVolume(volume: number): this {
-		volume = Number(volume);
-
 		if (isNaN(volume)) throw new TypeError("Volume must be a number.");
-		this.volume = Math.max(Math.min(volume, 1000), 0);
 
-		this.node.send({
-			op: "volume",
-			guildId: this.guild,
-			volume: this.volume,
+		this.node.rest.updatePlayer({
+			guildId: this.options.guild,
+			data: {
+				volume,
+			},
 		});
+
+		this.volume = volume;
 
 		return this;
 	}
@@ -343,17 +300,21 @@ export class Player {
 	 * @param repeat
 	 */
 	public setTrackRepeat(repeat: boolean): this {
-		if (typeof repeat !== "boolean")
-			throw new TypeError('Repeat can only be "true" or "false".');
+		if (typeof repeat !== "boolean") throw new TypeError('Repeat can only be "true" or "false".');
+
+		const oldPlayer = { ...this };
 
 		if (repeat) {
 			this.trackRepeat = true;
 			this.queueRepeat = false;
+			this.dynamicRepeat = false;
 		} else {
 			this.trackRepeat = false;
 			this.queueRepeat = false;
+			this.dynamicRepeat = false;
 		}
 
+		this.manager.emit("PlayerStateUpdate", oldPlayer, this);
 		return this;
 	}
 
@@ -362,18 +323,78 @@ export class Player {
 	 * @param repeat
 	 */
 	public setQueueRepeat(repeat: boolean): this {
-		if (typeof repeat !== "boolean")
-			throw new TypeError('Repeat can only be "true" or "false".');
+		if (typeof repeat !== "boolean") throw new TypeError('Repeat can only be "true" or "false".');
+
+		const oldPlayer = { ...this };
 
 		if (repeat) {
 			this.trackRepeat = false;
 			this.queueRepeat = true;
+			this.dynamicRepeat = false;
 		} else {
 			this.trackRepeat = false;
 			this.queueRepeat = false;
+			this.dynamicRepeat = false;
 		}
 
+		this.manager.emit("PlayerStateUpdate", oldPlayer, this);
 		return this;
+	}
+
+	/**
+	 * Sets the queue to repeat and shuffles the queue after each song.
+	 * @param repeat "true" or "false".
+	 * @param ms After how many milliseconds to trigger dynamic repeat.
+	 */
+	public setDynamicRepeat(repeat: boolean, ms: number): this {
+		if (typeof repeat !== "boolean") {
+			throw new TypeError('Repeat can only be "true" or "false".');
+		}
+
+		if (this.queue.size <= 1) {
+			throw new RangeError("The queue size must be greater than 1.");
+		}
+
+		const oldPlayer = { ...this };
+
+		if (repeat) {
+			this.trackRepeat = false;
+			this.queueRepeat = false;
+			this.dynamicRepeat = true;
+
+			this.dynamicLoopInterval = setInterval(() => {
+				if (!this.dynamicRepeat) return;
+				const shuffled = _.shuffle(this.queue);
+				this.queue.clear();
+				shuffled.forEach((track) => {
+					this.queue.add(track);
+				});
+			}, ms) as NodeJS.Timeout;
+		} else {
+			clearInterval(this.dynamicLoopInterval);
+			this.trackRepeat = false;
+			this.queueRepeat = false;
+			this.dynamicRepeat = false;
+		}
+
+		this.manager.emit("PlayerStateUpdate", oldPlayer, this);
+		return this;
+	}
+
+	/** Restarts the current track to the start. */
+	public restart(): void {
+		if (!this.queue.current?.track) {
+			if (this.queue.length) this.play();
+			return;
+		}
+
+		this.node.rest.updatePlayer({
+			guildId: this.guild,
+			data: {
+				position: 0,
+				encodedTrack: this.queue.current?.track,
+			},
+		});
 	}
 
 	/** Stops the current track, optionally give an amount to skip to, e.g 5 would play the 5th song. */
@@ -383,9 +404,11 @@ export class Player {
 			this.queue.splice(0, amount - 1);
 		}
 
-		this.node.send({
-			op: "stop",
+		this.node.rest.updatePlayer({
 			guildId: this.guild,
+			data: {
+				encodedTrack: null,
+			},
 		});
 
 		return this;
@@ -396,18 +419,30 @@ export class Player {
 	 * @param pause
 	 */
 	public pause(pause: boolean): this {
-		if (typeof pause !== "boolean")
-			throw new RangeError('Pause can only be "true" or "false".');
+		if (typeof pause !== "boolean") throw new RangeError('Pause can only be "true" or "false".');
+
 		if (this.paused === pause || !this.queue.totalSize) return this;
+
+		const oldPlayer = { ...this };
 
 		this.playing = !pause;
 		this.paused = pause;
 
-		this.node.send({
-			op: "pause",
+		this.node.rest.updatePlayer({
 			guildId: this.guild,
-			pause,
+			data: {
+				paused: pause,
+			},
 		});
+
+		this.manager.emit("PlayerStateUpdate", oldPlayer, this);
+		return this;
+	}
+
+	/** Go back to the previous song. */
+	public previous(): this {
+		this.queue.unshift(this.queue.previous);
+		this.stop();
 
 		return this;
 	}
@@ -423,14 +458,15 @@ export class Player {
 		if (isNaN(position)) {
 			throw new RangeError("Position must be a number.");
 		}
-		if (position < 0 || position > this.queue.current.duration)
-			position = Math.max(Math.min(position, this.queue.current.duration), 0);
+		if (position < 0 || position > this.queue.current.duration) position = Math.max(Math.min(position, this.queue.current.duration), 0);
 
 		this.position = position;
-		this.node.send({
-			op: "seek",
+
+		this.node.rest.updatePlayer({
 			guildId: this.guild,
-			position,
+			data: {
+				position: position,
+			},
 		});
 
 		return this;
@@ -458,14 +494,20 @@ export interface PlayerOptions {
 export interface Track {
 	/** The base64 encoded track. */
 	readonly track: string;
+	/** The artwork url of the track. */
+	readonly artworkUrl: string;
+	/** The track source name. */
+	readonly sourceName: TrackSourceName;
 	/** The title of the track. */
-	readonly title: string;
+	title: string;
 	/** The identifier of the track. */
 	readonly identifier: string;
 	/** The author of the track. */
-	readonly author: string;
+	author: string;
 	/** The duration of the track. */
 	readonly duration: number;
+	/** The ISRC of the track. */
+	readonly isrc: string;
 	/** If the track is seekable. */
 	readonly isSeekable: boolean;
 	/** If the track is a stream.. */
@@ -475,9 +517,22 @@ export interface Track {
 	/** The thumbnail of the track or null if it's a unsupported source. */
 	readonly thumbnail: string | null;
 	/** The user that requested the track. */
-	readonly requester: unknown | null;
+	readonly requester: User | ClientUser | null;
 	/** Displays the track thumbnail with optional size or null if it's a unsupported source. */
 	displayThumbnail(size?: Sizes): string;
+	/** Additional track info provided by plugins. */
+	pluginInfo: TrackPluginInfo;
+	/** Add your own data to the track. */
+	customData: Record<string, unknown>;
+}
+
+export interface TrackPluginInfo {
+	albumName?: string;
+	albumUrl?: string;
+	artistArtworkUrl?: string;
+	artistUrl?: string;
+	isPreview?: string;
+	previewUrl?: string;
 }
 
 /** Unresolved tracks can't be played normally, they will resolve before playing into a Track. */

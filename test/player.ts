@@ -16,7 +16,6 @@ let manager = new Manager({
             host: 'localhost',
             port: 2333,
             password: 'youshallnotpass',
-            version: "v4",
         },
     ],
     clientId: "1234567890",

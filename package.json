@@ -3,9 +3,10 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
-  "version": "1.0.4-indev",
+  "version": "1.0.5-indev",
   "description": "Sunday a lavalink wrapper",
   "license": "MIT",
+  "author": "FAYStarNext",
   "scripts": {
     "build:js": "npx babel src --out-dir dist --extensions \".ts,.tsx\" --source-maps inline",
     "lint": "npx eslint src/**/*.ts",
@@ -24,6 +25,10 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
+  "bugs": {
+    "url": "https://github.com/FAYStarNext/Sunday.ts/issues"
+  },
+  "homepage": "https://github.com/FAYStarNext/Sunday.ts#readme",
   "peerDependencies": {
     "typescript": "^5.5.3"
   },
