@@ -1,5 +1,5 @@
 import { Node } from "./Node";
-import axios, { AxiosRequestConfig } from "axios";
+import fetch from "node-fetch";
 
 /** Handles the requests sent to the Lavalink REST API. */
 export class Rest {
@@ -45,19 +45,16 @@ export class Rest {
 
 	/* Sends a GET request to the specified endpoint and returns the response data. */
 	private async request(method: "GET" | "POST" | "PATCH" | "DELETE", endpoint: string, body?: unknown): Promise<unknown> {
-		const config: AxiosRequestConfig = {
-			method,
-			url: this.url + endpoint,
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: this.password,
-			},
-			data: body,
-		};
-
 		try {
-			const response = await axios(config);
-			return response.data;
+			const response = await fetch(this.url + endpoint, {
+				method,
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: this.password,
+				},
+				body: JSON.stringify(body),
+			});
+			return JSON.parse(await response.text());
 		} catch(error) {
 			if (error?.response?.status === 404) {
 				this.node.destroy();
