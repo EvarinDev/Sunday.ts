@@ -1,5 +1,5 @@
 import { Client } from "discord.js";
-import { Manager } from "../../src";
+import { Manager } from "sunday.ts";
 import "dotenv/config";
 
 let client = new Client({
