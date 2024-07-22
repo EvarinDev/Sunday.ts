@@ -159,12 +159,13 @@ export class Player {
 	/** Clears the equalizer bands. */
 	public clearEQ(): this {
 		this.bands = new Array(15).fill(0.0);
-
-		this.node.send({
-			op: "equalizer",
-			guildId: this.guild,
-			bands: this.bands.map((gain, band) => ({ band, gain })),
-		});
+		if (this.node.options.version === "v3") {
+			this.node.send({
+				op: "equalizer",
+				guildId: this.guild,
+				bands: this.bands.map((gain, band) => ({ band, gain })),
+			});
+		}
 
 		return this;
 	}
@@ -315,7 +316,17 @@ export class Player {
 			options.track = (options.track as Track).track;
 		}
 
-		await this.node.send(options);
+		if (this.node.options.version === "v4") {
+			await this.node.rest.updatePlayer({
+				guildId: this.guild,
+				data: {
+					encodedTrack: this.queue.current?.track,
+					...finalOptions,
+				},
+			});
+		} else {
+			await this.node.send(options);
+		}
 	}
 
 	/**
