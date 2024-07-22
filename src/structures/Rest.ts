@@ -44,7 +44,7 @@ export class Rest {
 	}
 
 	/* Sends a GET request to the specified endpoint and returns the response data. */
-	private async request(method: string, endpoint: string, body?: unknown): Promise<unknown> {
+	private async request(method: "GET" | "POST" | "PATCH" | "DELETE", endpoint: string, body?: unknown): Promise<unknown> {
 		const config: AxiosRequestConfig = {
 			method,
 			url: this.url + endpoint,
