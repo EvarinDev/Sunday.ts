@@ -20,10 +20,6 @@ let manager = new Manager({
             resumeStatus: true,
         },
     ],
-    cache: {
-        enable: true,
-        time: 60000,
-    },
     clientId: "1234567890",
     send(guild_id, payload) {
         const guild = client.guilds.cache.get(guild_id);
@@ -55,10 +51,7 @@ client.on("messageCreate", async (message) => {
         let end;
         try {
             // Search for tracks using a query or url, using a query searches youtube automatically and the track requester object
-            res = await manager.search({
-                query: search,
-                cache: true,
-            });
+            res = await manager.search({query: search});
             end = `Time took: ${Math.round(performance.now() - start)}ms.`;
             // Check the load type as this command is not that advanced for basics
             if (res.loadType === 'empty') throw res;

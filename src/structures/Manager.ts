@@ -137,7 +137,6 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 		if (this.options.nodes) this.options.nodes.forEach((nodeOptions) => { return new (Structure.get("Node"))(nodeOptions); });
 		setInterval(() => {
 			this.search_cache.clear();
-			console.log("Cache cleared.");
 		}, this.options.cache?.time || 10000);
 	}
 
@@ -178,7 +177,6 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 		let search = _query.query;
 
 		if (!/^https?:\/\//.test(search)) search = `${_source}:${search}`;
-		console.log(await this.search_cache.get(String(search)))
 		if (this.search_cache.get(String(search))) {
 			let data = await this.search_cache.get(String(search))
 			return data
@@ -240,10 +238,7 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 				}
 			}
 
-			console.log(this.CheckURL(String(search)))
 			if (res.loadType === "search") await this.search_cache.set(String(search), result);
-			console.log(String(search))
-			console.log(await this.search_cache.get(String(search)))
 
 			return result;
 		} catch (err) {
