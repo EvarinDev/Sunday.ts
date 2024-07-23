@@ -31,14 +31,21 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 		soundcloud: "scsearch",
 		deezer: "dzsearch",
 	};
+	YOUTUBE_REGEX = /https?:\/\/(www\.)?(youtu\.be|youtube\.com|music\.youtube\.com|m\.youtube\.com)/;
+	SOUNDCLOUD_REGEX = /^(https?:\/\/)?(www\.)?(soundcloud\.com)\/.+$/;
+	SPOTIFY_REGEX = /^(https?:\/\/)?(open\.spotify\.com)\/.+$/;
+	BILIBILITV_REGEX = /^(https?:\/\/)?(www\.)?(bilibili\.tv)\/.+$/;
+	JOOX_REGEX = /^(https?:\/\/)?(www\.)?(joox\.com)\/.+$/;
 
 	/** The map of players. */
-	public readonly players = new Collection<string, Player>();
+	public readonly players: Collection<string, Player> = new Collection<string, Player>();
 	/** The map of nodes. */
-	public readonly nodes = new Collection<string, Node>();
+	public readonly nodes: Collection<string, Node> = new Collection<string, Node>();
 	/** The options that were set. */
 	public readonly options: ManagerOptions;
 	private initiated = false;
+	/** The map of search. */
+	public readonly search_cache: Map<string, SearchResult> = new Map<string, SearchResult>();
 
 	/** Returns the nodes that has the least load. */
 	private get leastLoadNode(): Collection<string, Node> {
@@ -127,9 +134,11 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 			}
 		}
 
-		if (this.options.nodes) {
-			for (const nodeOptions of this.options.nodes) new (Structure.get("Node"))(nodeOptions);
-		}
+		if (this.options.nodes) this.options.nodes.forEach((nodeOptions) => { return new (Structure.get("Node"))(nodeOptions); });
+		setInterval(() => {
+			this.search_cache.clear();
+			console.log("Cache cleared.");
+		}, this.options.cache?.time || 10000);
 	}
 
 	/**
@@ -139,9 +148,7 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 	public init(clientId?: string): this {
 		if (this.initiated) return this;
 		if (typeof clientId !== "undefined") this.options.clientId = clientId;
-
 		if (typeof this.options.clientId !== "string") throw new Error('"clientId" set is not type of "string"');
-
 		if (!this.options.clientId) throw new Error('"clientId" is not set. Pass it in Manager#init() or as a option in the constructor.');
 
 		for (const node of this.nodes.values()) {
@@ -162,53 +169,46 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 	 * @param requester
 	 * @returns The search result.
 	 */
-	public async search(query: string | SearchQuery, requester?: User | ClientUser): Promise<SearchResult> {
+
+	public async search(options: SearchQuery): Promise<SearchResult> {
 		const node = this.useableNodes;
-
-		if (!node) {
-			throw new Error("No available nodes.");
-		}
-
-		const _query: SearchQuery = typeof query === "string" ? { query } : query;
+		if (!node) throw new Error("No available nodes.");
+		const _query: SearchQuery = typeof options.query === "string" ? { query: options.query } : options.query;
 		const _source = Manager.DEFAULT_SOURCES[_query.source ?? this.options.defaultSearchPlatform] ?? _query.source;
-
 		let search = _query.query;
 
-		if (!/^https?:\/\//.test(search)) {
-			search = `${_source}:${search}`;
-		}
+		if (!/^https?:\/\//.test(search)) search = `${_source}:${search}`;
+		console.log(await this.search_cache.get(String(search)))
+		if (this.search_cache.get(String(search))) {
+			let data = await this.search_cache.get(String(search))
+			return data
+		};
 
 		try {
 			const res = (await node.rest.get(`/v4/loadtracks?identifier=${encodeURIComponent(search)}`)) as LavalinkResponse;
-
-			if (!res) {
-				throw new Error("Query not found.");
-			}
+			if (!res) throw new Error("Query not found.");
 
 			let searchData = [];
 			let playlistData: PlaylistRawData | undefined;
-
 			switch (res.loadType) {
 				case "search":
 					searchData = res.data as TrackData[];
 					break;
-
 				case "track":
 					searchData = [res.data as TrackData[]];
 					break;
-
 				case "playlist":
 					playlistData = res.data as PlaylistRawData;
 					break;
 			}
 
-			const tracks = searchData.map((track) => TrackUtils.build(track, requester));
+			const tracks = searchData.map((track) => TrackUtils.build(track, options.requester));
 			let playlist = null;
 
 			if (res.loadType === "playlist") {
 				playlist = {
 					name: playlistData!.info.name,
-					tracks: playlistData!.tracks.map((track) => TrackUtils.build(track, requester)),
+					tracks: playlistData!.tracks.map((track) => TrackUtils.build(track, options.requester)),
 					duration: playlistData!.tracks.reduce((acc, cur) => acc + (cur.info.length || 0), 0),
 				};
 			}
@@ -222,13 +222,13 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 			if (this.options.replaceYouTubeCredentials) {
 				let tracksToReplace: Track[] = [];
 				if (result.loadType === "playlist") {
-					tracksToReplace = result.playlist.tracks;
+					tracksToReplace = result.playlist!.tracks;
 				} else {
 					tracksToReplace = result.tracks;
 				}
 
 				for (const track of tracksToReplace) {
-					if (isYouTubeURL(track.uri)) {
+					if (this.YOUTUBE_REGEX.test(track.uri)) {
 						track.author = track.author.replace("- Topic", "");
 						track.title = track.title.replace("Topic -", "");
 					}
@@ -240,16 +240,38 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 				}
 			}
 
+			console.log(this.CheckURL(String(search)))
+			if (res.loadType === "search") await this.search_cache.set(String(search), result);
+			console.log(String(search))
+			console.log(await this.search_cache.get(String(search)))
+
 			return result;
 		} catch (err) {
 			throw new Error(err);
 		}
+	}
 
-		function isYouTubeURL(uri: string): boolean {
-			return uri.includes("youtube.com") || uri.includes("youtu.be");
+	private CheckURL(uri: string): string {
+		let data = this.regex_link(uri);
+		switch (data) {
+			case "yt":
+				return "yt:" + uri.replace("https://www.youtube.com/watch?v=", "");
 		}
 	}
 
+	private isLink(link: string) {
+		return /^(https?:\/\/)?(www\.)?([a-zA-Z0-9]+)\.([a-zA-Z0-9]+)\/.+$/.test(link);
+	}
+	
+	private regex_link(link: string) {
+		if (this.YOUTUBE_REGEX.test(link)) return "yt";
+		if (this.SOUNDCLOUD_REGEX.test(link)) return "sc";
+		if (this.SPOTIFY_REGEX.test(link)) return "sp";
+		if (this.BILIBILITV_REGEX.test(link)) return "bi:tv";
+		if (this.JOOX_REGEX.test(link)) return "jx";
+		if (this.isLink(link)) return "http";
+		return null;
+	}
 	/**
 	 * Decodes the base64 encoded tracks and returns a TrackData array.
 	 * @param tracks
@@ -412,6 +434,12 @@ export interface ManagerOptions {
 	defaultSearchPlatform?: SearchPlatform;
 	/** Whether the YouTube video titles should be replaced if the Author does not exactly match. */
 	replaceYouTubeCredentials?: boolean;
+	cache?: {
+		/** Whether to enable cache. */
+		enable: boolean;
+		/** Clear cache every second */
+		time: number;
+	}
 	/**
 	 * Function to send data to the websocket.
 	 * @param id
@@ -427,6 +455,8 @@ export interface SearchQuery {
 	source?: SearchPlatform | string;
 	/** The query to search for. */
 	query: string;
+	requester?: User | ClientUser;
+	cache?: boolean
 }
 
 export interface LavalinkResponse {
@@ -464,22 +494,22 @@ export interface PlaylistData {
 }
 
 export interface ManagerEvents {
-    NodeCreate: (node: Node) => void;
-    NodeDestroy: (node: Node) => void;
-    NodeConnect: (node: Node) => void;
-    NodeReconnect: (node: Node) => void;
-    NodeDisconnect: (node: Node, reason: { code?: number; reason?: string }) => void;
-    NodeError: (node: Node, error: Error) => void;
-    NodeRaw: (payload: unknown) => void;
-    PlayerCreate: (player: Player) => void;
-    PlayerDestroy: (player: Player) => void;
-    PlayerStateUpdate: (oldPlayer: Player, newPlayer: Player) => void;
-    PlayerMove: (player: Player, initChannel: string, newChannel: string) => void;
-    PlayerDisconnect: (player: Player, oldChannel: string) => void;
-    QueueEnd: (player: Player, track: Track | UnresolvedTrack, payload: TrackEndEvent) => void;
-    SocketClosed: (player: Player, payload: WebSocketClosedEvent) => void;
-    TrackStart: (player: Player, track: Track, payload: TrackStartEvent) => void;
-    TrackEnd: (player: Player, track: Track, payload: TrackEndEvent) => void;
-    TrackStuck: (player: Player, track: Track, payload: TrackStuckEvent) => void;
-    TrackError: (player: Player, track: Track | UnresolvedTrack, payload: TrackExceptionEvent) => void;
+	NodeCreate: (node: Node) => void;
+	NodeDestroy: (node: Node) => void;
+	NodeConnect: (node: Node) => void;
+	NodeReconnect: (node: Node) => void;
+	NodeDisconnect: (node: Node, reason: { code?: number; reason?: string }) => void;
+	NodeError: (node: Node, error: Error) => void;
+	NodeRaw: (payload: unknown) => void;
+	PlayerCreate: (player: Player) => void;
+	PlayerDestroy: (player: Player) => void;
+	PlayerStateUpdate: (oldPlayer: Player, newPlayer: Player) => void;
+	PlayerMove: (player: Player, initChannel: string, newChannel: string) => void;
+	PlayerDisconnect: (player: Player, oldChannel: string) => void;
+	QueueEnd: (player: Player, track: Track | UnresolvedTrack, payload: TrackEndEvent) => void;
+	SocketClosed: (player: Player, payload: WebSocketClosedEvent) => void;
+	TrackStart: (player: Player, track: Track, payload: TrackStartEvent) => void;
+	TrackEnd: (player: Player, track: Track, payload: TrackEndEvent) => void;
+	TrackStuck: (player: Player, track: Track, payload: TrackStuckEvent) => void;
+	TrackError: (player: Player, track: Track | UnresolvedTrack, payload: TrackExceptionEvent) => void;
 }
