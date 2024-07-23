@@ -113,7 +113,10 @@ export class Player {
 	 * @param requester
 	 */
 	public search(query: string | SearchQuery, requester?: User | ClientUser): Promise<SearchResult> {
-		return this.manager.search(query, requester);
+		return this.manager.search({
+			query: query as string,
+			requester: requester,
+		});
 	}
 
 	/** Connect to the voice channel. */

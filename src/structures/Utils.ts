@@ -157,7 +157,10 @@ export abstract class TrackUtils {
 		if (!TrackUtils.isUnresolvedTrack(unresolvedTrack)) throw new RangeError("Provided track is not a UnresolvedTrack.");
 
 		const query = unresolvedTrack.uri ? unresolvedTrack.uri : [unresolvedTrack.author, unresolvedTrack.title].filter(Boolean).join(" - ");
-		const res = await TrackUtils.manager.search(query, unresolvedTrack.requester);
+		const res = await TrackUtils.manager.search({
+			query,
+			requester: unresolvedTrack.requester,
+		});
 
 		if (unresolvedTrack.author) {
 			const channelNames = [unresolvedTrack.author, `${unresolvedTrack.author} - Topic`];
