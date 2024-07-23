@@ -1,5 +1,5 @@
 import { Client } from "discord.js";
-import { Manager } from "sunday.ts";
+import { Manager } from "../../src";
 import "dotenv/config";
 
 let client = new Client({
@@ -33,9 +33,6 @@ manager.on("NodeConnect", (node) => {
 manager.on("NodeRaw", async (node) => {
     console.log(`sent raw data: ${JSON.stringify(node)}`);
 });
-client.on("ready", () => {
-    manager.init();
-});
 manager.on("PlayerCreate", (player) => {
     console.log(`Player created in guild ${player.guild}`);
 });
@@ -43,19 +40,19 @@ manager.on("NodeError" , (node, error) => {
     console.log(`Node ${node.options.host} has an error: ${error.message}`);
 });
 client.on("messageCreate", async (message) => {
-    console.log(message.content)
+    if (message.author.bot) return;
+    const start = performance.now();
     const [command, ...args] = message.content.slice(0).split(/\s+/g);
-    console.log(command)
-    console.log(command === 'play')
     if (command === 'play') {
         if (!message.member?.voice.channel) return message.reply('you need to join a voice channel.');
         if (!args.length) return message.reply('you need to give me a URL or a search term.');
-
         const search = args.join(' ');
         let res;
+        let end;
         try {
             // Search for tracks using a query or url, using a query searches youtube automatically and the track requester object
-            res = await manager.search(search, message.author);
+            res = await manager.search({query: search});
+            end = `Time took: ${Math.round(performance.now() - start)}ms.`;
             // Check the load type as this command is not that advanced for basics
             if (res.loadType === 'empty') throw res;
             if (res.loadType === 'playlist') {
@@ -79,13 +76,16 @@ client.on("messageCreate", async (message) => {
 
         // Connect to the voice channel and add the track to the queue
         player.connect();
-        console.log(res)
         await player.queue.add(res.tracks[0]);
         // Checks if the client should play the track if it's the first one added
         if (!player.playing && !player.paused && !player.queue.size) player.play();
 
-        return message.reply(`enqueuing ${res.tracks[0].title}.`);
+        return message.reply(`enqueuing ${res.tracks[0].title}. ${end}`);
     }
 });
 client.on("raw", (data) => manager.updateVoiceState(data));
+client.on("ready" , () => {
+    manager.init(client.user?.id as string);
+    console.log(`Logged in as ${client.user?.tag} | Memory usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
+});
 client.login(process.env.TOKEN);
