@@ -136,14 +136,8 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 
 		if (this.options.nodes) this.options.nodes.forEach((nodeOptions) => { return new (Structure.get("Node"))(nodeOptions); });
 		setInterval(() => {
-			const searchCacheKeys = this.search_cache.keys();
-			const searchCacheValues = this.search_cache.values();
-			const firstKey = searchCacheKeys.next().value;
-			const firstValue = searchCacheValues.next().value;
-			if (firstKey && firstValue) {
-			const searchResultString = JSON.stringify(firstValue);
-			  this.emit("SearchCacheClear", firstKey, searchResultString);
-			}
+			if (this.search_cache.clear() === undefined) return;
+			this.emit("SearchCacheClear", this.search_cache.values().next().value);
 			this.search_cache.clear();
 		}, this.options.cache?.time || 10000);
 	}
@@ -240,7 +234,7 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 					}
 				}
 			}
-			if (res.loadType === "search" || "track") this.search_cache.set(code, result);
+			if (options.cache !== false && this.options.cache.enabled !== false) if (res.loadType === "search" || "track") this.search_cache.set(code, result);
 			return result;
 		} catch (err) {
 			throw new Error(err);
@@ -445,7 +439,7 @@ export interface ManagerOptions {
 	replaceYouTubeCredentials?: boolean;
 	cache?: {
 		/** Whether to enable cache. */
-		enable: boolean;
+		enabled: boolean;
 		/** Clear cache every second */
 		time: number;
 	}
@@ -506,7 +500,7 @@ export interface PlaylistData {
 }
 
 export interface ManagerEvents {
-	SearchCacheClear: (key: string, values: SearchResult | unknown) => void;
+	SearchCacheClear: (data: string) => void;
 	NodeCreate: (node: Node) => void;
 	NodeDestroy: (node: Node) => void;
 	NodeConnect: (node: Node) => void;
