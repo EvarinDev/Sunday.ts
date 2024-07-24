@@ -20,6 +20,10 @@ let manager = new Manager({
             resumeStatus: true,
         },
     ],
+    cache: {
+        enabled: true,
+        time: 60000,
+    },
     clientId: "1234567890",
     send(guild_id, payload) {
         const guild = client.guilds.cache.get(guild_id);
@@ -83,8 +87,8 @@ client.on("messageCreate", async (message) => {
         return message.reply(`enqueuing ${res.tracks[0].title}. ${end}`);
     }
 });
-manager.on("SearchCacheClear" , (key: string,  values) => {
-    console.log(`Cache cleared for ${key} with values: ${values}`);
+manager.on("SearchCacheClear" , (data) => {
+    console.log(`Cache cleared: ${data}`);
 });
 client.on("raw", (data) => manager.updateVoiceState(data));
 client.on("ready" , () => {
