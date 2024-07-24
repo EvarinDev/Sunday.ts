@@ -136,6 +136,14 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 
 		if (this.options.nodes) this.options.nodes.forEach((nodeOptions) => { return new (Structure.get("Node"))(nodeOptions); });
 		setInterval(() => {
+			const searchCacheKeys = this.search_cache.keys();
+			const searchCacheValues = this.search_cache.values();
+			const firstKey = searchCacheKeys.next().value;
+			const firstValue = searchCacheValues.next().value;
+			if (firstKey && firstValue) {
+			const searchResultString = JSON.stringify(firstValue);
+			  this.emit("SearchCacheClear", firstKey, searchResultString);
+			}
 			this.search_cache.clear();
 		}, this.options.cache?.time || 10000);
 	}
@@ -168,20 +176,15 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 	 * @param requester
 	 * @returns The search result.
 	 */
-
 	public async search(options: SearchQuery): Promise<SearchResult> {
 		const node = this.useableNodes;
 		if (!node) throw new Error("No available nodes.");
 		const _query: SearchQuery = typeof options.query === "string" ? { query: options.query } : options.query;
 		const _source = Manager.DEFAULT_SOURCES[_query.source ?? this.options.defaultSearchPlatform] ?? _query.source;
 		let search = _query.query;
-
+		let code = this.CheckURL(options.query);
 		if (!/^https?:\/\//.test(search)) search = `${_source}:${search}`;
-		if (this.search_cache.get(String(search))) {
-			let data = await this.search_cache.get(String(search))
-			return data
-		};
-
+		if (this.search_cache.get(code)) return this.search_cache.get(code);
 		try {
 			const res = (await node.rest.get(`/v4/loadtracks?identifier=${encodeURIComponent(search)}`)) as LavalinkResponse;
 			if (!res) throw new Error("Query not found.");
@@ -237,23 +240,40 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 					}
 				}
 			}
-
-			if (res.loadType === "search") await this.search_cache.set(String(search), result);
-
+			if (res.loadType === "search" || "track") this.search_cache.set(code, result);
 			return result;
 		} catch (err) {
 			throw new Error(err);
 		}
 	}
 
+	private ToOrginalURL(uri: string): string {
+		switch (uri.split(":")[0]) {
+			case "yt":
+				const videoCode = uri.match(/v=([^&]+)/)?.[1];
+				const playlistCode = uri.match(/list=([^&]+)/)?.[1];
+				if (playlistCode) {
+					return "https://www.youtube.com/playlist?list=" + playlistCode;
+				}
+				return "https://www.youtube.com/watch?v=" + (videoCode ?? "");
+		}
+		return uri;
+	}
+
 	private CheckURL(uri: string): string {
 		let data = this.regex_link(uri);
 		switch (data) {
 			case "yt":
-				return "yt:" + uri.replace("https://www.youtube.com/watch?v=", "");
+				const videoCode = uri.match(/v=([^&]+)/)?.[1];
+				const playlistCode = uri.match(/list=([^&]+)/)?.[1];
+				if (playlistCode) {
+					return "yt:playlist:" + playlistCode;
+				}
+				return "yt:" + (videoCode ?? "");
 		}
+		return uri;
 	}
-
+	
 	private isLink(link: string) {
 		return /^(https?:\/\/)?(www\.)?([a-zA-Z0-9]+)\.([a-zA-Z0-9]+)\/.+$/.test(link);
 	}
@@ -262,26 +282,20 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 		if (this.YOUTUBE_REGEX.test(link)) return "yt";
 		if (this.SOUNDCLOUD_REGEX.test(link)) return "sc";
 		if (this.SPOTIFY_REGEX.test(link)) return "sp";
-		if (this.BILIBILITV_REGEX.test(link)) return "bi:tv";
-		if (this.JOOX_REGEX.test(link)) return "jx";
 		if (this.isLink(link)) return "http";
 		return null;
 	}
+	
 	/**
 	 * Decodes the base64 encoded tracks and returns a TrackData array.
 	 * @param tracks
 	 */
 	public decodeTracks(tracks: string[]): Promise<TrackData[]> {
-		return new Promise(async (resolve, reject) => {
+		return new Promise<TrackData[]>(async (resolve, reject) => {
 			const node = this.nodes.first();
 			if (!node) throw new Error("No available nodes.");
-
 			const res = (await node.rest.post("/v4/decodetracks", JSON.stringify(tracks)).catch((err) => reject(err))) as TrackData[];
-
-			if (!res) {
-				return reject(new Error("No data returned from query."));
-			}
-
+			if (!res) return reject(new Error("No data returned from query."));
 			return resolve(res);
 		});
 	}
@@ -444,6 +458,9 @@ export interface ManagerOptions {
 }
 
 export type SearchPlatform = "deezer" | "soundcloud" | "youtube music" | "youtube";
+/* The above code is defining a TypeScript type that represents a union of
+string literals. The type can only have one of the specified values:
+"deezer", "soundcloud", "youtube music", or "youtube". */
 
 export interface SearchQuery {
 	/** The source to search from. */
@@ -489,6 +506,7 @@ export interface PlaylistData {
 }
 
 export interface ManagerEvents {
+	SearchCacheClear: (key: string, values: SearchResult | unknown) => void;
 	NodeCreate: (node: Node) => void;
 	NodeDestroy: (node: Node) => void;
 	NodeConnect: (node: Node) => void;
