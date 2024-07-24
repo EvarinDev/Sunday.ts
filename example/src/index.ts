@@ -30,9 +30,9 @@ let manager = new Manager({
 manager.on("NodeConnect", (node) => {
     console.log(`Node ${node.options.host} connected`);
 });
-manager.on("NodeRaw", async (node) => {
-    console.log(`sent raw data: ${JSON.stringify(node)}`);
-});
+// manager.on("NodeRaw", async (node) => {
+//     console.log(`sent raw data: ${JSON.stringify(node)}`);
+// });
 manager.on("PlayerCreate", (player) => {
     console.log(`Player created in guild ${player.guild}`);
 });
@@ -82,6 +82,9 @@ client.on("messageCreate", async (message) => {
 
         return message.reply(`enqueuing ${res.tracks[0].title}. ${end}`);
     }
+});
+manager.on("SearchCacheClear" , (key: string,  values) => {
+    console.log(`Cache cleared for ${key} with values: ${values}`);
 });
 client.on("raw", (data) => manager.updateVoiceState(data));
 client.on("ready" , () => {
