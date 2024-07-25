@@ -1,5 +1,4 @@
 import { Node } from "./Node";
-import fetch from "node-fetch";
 
 /** Handles the requests sent to the Lavalink REST API. */
 export class Rest {
