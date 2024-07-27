@@ -178,7 +178,9 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 		let search = _query.query;
 		let code = this.CheckURL(options.query);
 		if (!/^https?:\/\//.test(search)) search = `${_source}:${search}`;
-		if (this.search_cache.get(code)) return this.search_cache.get(code);
+		if (options.cache !== false && this.options.cache.enabled !== false) {
+			if (this.search_cache.get(code)) return this.search_cache.get(code);
+		}
 		try {
 			const res = (await node.rest.get(`/v4/loadtracks?identifier=${encodeURIComponent(search)}`)) as LavalinkResponse;
 			if (!res) throw new Error("Query not found.");
