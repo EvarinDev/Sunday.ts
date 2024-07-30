@@ -20,7 +20,7 @@ let manager = new Manager({
             resumeStatus: true,
         },
     ],
-    cache: {
+    caches: {
         enabled: true,
         time: 60000,
     },
