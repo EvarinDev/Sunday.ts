@@ -135,11 +135,13 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 		}
 
 		if (this.options.nodes) this.options.nodes.forEach((nodeOptions) => { return new (Structure.get("Node"))(nodeOptions); });
-		setInterval(() => {
-			if (this.search_cache.clear() === undefined) return;
-			this.emit("SearchCacheClear", this.search_cache.values().next().value);
-			this.search_cache.clear();
-		}, this.options.cache?.time || 10000);
+		if (this.options.cache.enabled){
+			setInterval(() => {
+				if (this.search_cache.clear() === undefined) return;
+				this.emit("SearchCacheClear", this.search_cache.values().next().value);
+				this.search_cache.clear();
+			}, this.options.cache?.time || 10000);
+		} else return;
 	}
 
 	/**
