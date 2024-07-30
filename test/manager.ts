@@ -9,6 +9,10 @@ let client = new Manager({
         },
     ],
     clientId: "1234567890",
+    caches: {
+        enabled: true,
+        time: 60000,
+    },
     send(guild_id, payload) {
         console.log(`Sending payload to guild ${guild_id}: ${JSON.stringify(payload)}`);
     },

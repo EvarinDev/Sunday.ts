@@ -135,12 +135,12 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 		}
 
 		if (this.options.nodes) this.options.nodes.forEach((nodeOptions) => { return new (Structure.get("Node"))(nodeOptions); });
-		if (this.options.cache.enabled){
+		if (this.options.caches.enabled){
 			setInterval(() => {
 				if (this.search_cache.clear() === undefined) return;
 				this.emit("SearchCacheClear", this.search_cache.values().next().value);
 				this.search_cache.clear();
-			}, this.options.cache?.time || 10000);
+			}, this.options.caches?.time || 10000);
 		} else return;
 	}
 
@@ -180,7 +180,7 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 		let search = _query.query;
 		let code = this.CheckURL(options.query);
 		if (!/^https?:\/\//.test(search)) search = `${_source}:${search}`;
-		if (options.cache !== false && this.options.cache.enabled !== false) {
+		if (options.cache !== false && this.options.caches.enabled !== false) {
 			if (this.search_cache.get(code)) return this.search_cache.get(code);
 		}
 		try {
@@ -238,7 +238,7 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 					}
 				}
 			}
-			if (options.cache !== false && this.options.cache.enabled !== false) if (res.loadType === "search" || "track") this.search_cache.set(code, result);
+			if (options.cache !== false && this.options.caches.enabled !== false) if (res.loadType === "search" || "track") this.search_cache.set(code, result);
 			return result;
 		} catch (err) {
 			throw new Error(err);
@@ -441,7 +441,7 @@ export interface ManagerOptions {
 	defaultSearchPlatform?: SearchPlatform;
 	/** Whether the YouTube video titles should be replaced if the Author does not exactly match. */
 	replaceYouTubeCredentials?: boolean;
-	cache?: {
+	caches: {
 		/** Whether to enable cache. */
 		enabled: boolean;
 		/** Clear cache every second */
