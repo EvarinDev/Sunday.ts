@@ -3,7 +3,6 @@ import { Manager, SearchQuery, SearchResult } from "./Manager";
 import { Node } from "./Node";
 import { Queue } from "./Queue";
 import { Sizes, State, Structure, TrackSourceName, TrackUtils, VoiceState } from "./Utils";
-import * as _ from "lodash";
 import playerCheck from "../utils/playerCheck";
 import { ClientUser, Message, User } from "discord.js";
 
@@ -235,8 +234,8 @@ export class Player {
 		const finalOptions = playOptions
 			? playOptions
 			: ["startTime", "endTime", "noReplace"].every((v) => Object.keys(optionsOrTrack || {}).includes(v))
-			? (optionsOrTrack as PlayOptions)
-			: {};
+				? (optionsOrTrack as PlayOptions)
+				: {};
 
 		if (TrackUtils.isUnresolvedTrack(this.queue.current)) {
 			try {
@@ -343,7 +342,6 @@ export class Player {
 		this.manager.emit("PlayerStateUpdate", oldPlayer, this);
 		return this;
 	}
-
 	/**
 	 * Sets the queue to repeat and shuffles the queue after each song.
 	 * @param repeat "true" or "false".
@@ -364,10 +362,17 @@ export class Player {
 			this.trackRepeat = false;
 			this.queueRepeat = false;
 			this.dynamicRepeat = true;
-
+			function shuffleArray(array: Queue): Queue[] {
+				// Shuffle the array
+				for (let i = array.length - 1; i > 0; i--) {
+					const j = Math.floor(Math.random() * (i + 1));
+					[array[i], array[j]] = [array[j], array[i]];
+				}
+				return [array];
+			}
 			this.dynamicLoopInterval = setInterval(() => {
 				if (!this.dynamicRepeat) return;
-				const shuffled = _.shuffle(this.queue);
+				const shuffled = shuffleArray(this.queue);
 				this.queue.clear();
 				shuffled.forEach((track) => {
 					this.queue.add(track);
