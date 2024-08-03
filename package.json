@@ -18,7 +18,7 @@
     "@types/bun": "latest",
     "eslint": "^9.7.0",
     "globals": "^15.8.0",
-    "typescript-eslint": "^7.17.0",
+    "typescript-eslint": "^8.0.0",
     "@babel/cli": "^7.24.8",
     "@babel/core": "^7.24.9",
     "@babel/preset-env": "^7.24.8",
