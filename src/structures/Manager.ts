@@ -87,7 +87,15 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 
 	/** Returns the node to use. */
 	public get useableNodes(): Node {
-		return this.options.usePriority ? this.priorityNode : this.options.useNode === "leastLoad" ? this.leastLoadNode.first() : this.leastPlayersNode.first();
+		let selectedNode: Node;
+		if (this.options.usePriority) {
+			selectedNode = this.priorityNode;
+		} else if (this.options.useNode === "leastLoad") {
+			selectedNode = this.leastLoadNode.first();
+		} else {
+			selectedNode = this.leastPlayersNode.first();
+		}
+		return selectedNode;
 	}
 
 	/**
@@ -244,20 +252,6 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 			throw new Error(err);
 		}
 	}
-
-	private ToOrginalURL(uri: string): string {
-		switch (uri.split(":")[0]) {
-			case "yt":
-				const videoCode = uri.match(/v=([^&]+)/)?.[1];
-				const playlistCode = uri.match(/list=([^&]+)/)?.[1];
-				if (playlistCode) {
-					return "https://www.youtube.com/playlist?list=" + playlistCode;
-				}
-				return "https://www.youtube.com/watch?v=" + (videoCode ?? "");
-		}
-		return uri;
-	}
-
 	private CheckURL(uri: string): string {
 		let data = this.regex_link(uri);
 		switch (data) {
