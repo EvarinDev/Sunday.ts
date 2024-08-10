@@ -38,7 +38,6 @@
   "dependencies": {
     "@discordjs/collection": "^2.1.0",
     "discord.js": "^14.15.3",
-    "node-fetch": "^3.3.2",
     "tiny-typed-emitter": "^2.1.0",
     "ws": "^8.18.0"
   },
