@@ -143,7 +143,7 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 		}
 
 		if (this.options.nodes) this.options.nodes.forEach((nodeOptions) => { return new (Structure.get("Node"))(nodeOptions); });
-		if (this.options.caches.enabled){
+		if (this.options.caches.enabled) {
 			setInterval(() => {
 				if (this.search_cache.clear() === undefined) return;
 				this.emit("SearchCacheClear", this.search_cache.values().next().value);
@@ -180,96 +180,135 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 	 * @param requester
 	 * @returns The search result.
 	 */
+	// TypeScript
 	public async search(options: SearchQuery): Promise<SearchResult> {
 		const node = this.useableNodes;
 		if (!node) throw new Error("No available nodes.");
-		const _query: SearchQuery = typeof options.query === "string" ? { query: options.query } : options.query;
-		const _source = Manager.DEFAULT_SOURCES[_query.source ?? this.options.defaultSearchPlatform] ?? _query.source;
-		let search = _query.query;
-		let code = this.CheckURL(options.query);
-		if (!/^https?:\/\//.test(search)) search = `${_source}:${search}`;
-		if (options.cache !== false && this.options.caches.enabled !== false) {
-			if (this.search_cache.get(code)) return this.search_cache.get(code);
-		}
+		const { search, code } = this.prepareQuery(options);
+		const cachedResult = this.getCachedResult(options, code);
+		if (cachedResult) return cachedResult;
+
 		try {
-			const res = (await node.rest.get(`/v4/loadtracks?identifier=${encodeURIComponent(search)}`)) as LavalinkResponse;
-			if (!res) throw new Error("Query not found.");
+			const res = await this.fetchTracks(node, search);
+			const result = this.handleResponse(res, options);
 
-			let searchData = [];
-			let playlistData: PlaylistRawData | undefined;
-			switch (res.loadType) {
-				case "search":
-					searchData = res.data as TrackData[];
-					break;
-				case "track":
-					searchData = [res.data as TrackData[]];
-					break;
-				case "playlist":
-					playlistData = res.data as PlaylistRawData;
-					break;
+			if (options.cache !== false && this.options.caches.enabled !== false) {
+				this.cacheResult(res, code, result);
 			}
 
-			const tracks = searchData.map((track) => TrackUtils.build(track, options.requester));
-			let playlist = null;
-
-			if (res.loadType === "playlist") {
-				playlist = {
-					name: playlistData!.info.name,
-					tracks: playlistData!.tracks.map((track) => TrackUtils.build(track, options.requester)),
-					duration: playlistData!.tracks.reduce((acc, cur) => acc + (cur.info.length || 0), 0),
-				};
-			}
-
-			const result: SearchResult = {
-				loadType: res.loadType,
-				tracks,
-				playlist,
-			};
-
-			if (this.options.replaceYouTubeCredentials) {
-				let tracksToReplace: Track[] = [];
-				if (result.loadType === "playlist") {
-					tracksToReplace = result.playlist!.tracks;
-				} else {
-					tracksToReplace = result.tracks;
-				}
-
-				for (const track of tracksToReplace) {
-					if (this.YOUTUBE_REGEX.test(track.uri)) {
-						track.author = track.author.replace("- Topic", "");
-						track.title = track.title.replace("Topic -", "");
-					}
-					if (track.title.includes("-")) {
-						const [author, title] = track.title.split("-").map((str: string) => str.trim());
-						track.author = author;
-						track.title = title;
-					}
-				}
-			}
-			if (options.cache !== false && this.options.caches.enabled !== false) if (res.loadType === "search" || "track") this.search_cache.set(code, result);
 			return result;
 		} catch (err) {
 			throw new Error(err);
 		}
 	}
+
+	private prepareQuery(options: SearchQuery): { search: string, code: string } {
+		const _query: SearchQuery = typeof options.query === "string" ? { query: options.query } : options.query;
+		const _source = Manager.DEFAULT_SOURCES[_query.source ?? this.options.defaultSearchPlatform] ?? _query.source;
+		let search = _query.query;
+		let code = this.CheckURL(options.query);
+		if (!/^https?:\/\//.test(search)) search = `${_source}:${search}`;
+		return { search, code };
+	}
+
+	private getCachedResult(options: SearchQuery, code: string): SearchResult | null {
+		if (options.cache !== false && this.options.caches.enabled !== false) {
+			const cachedResult = this.search_cache.get(code);
+			if (cachedResult) return cachedResult;
+		}
+		return null;
+	}
+
+	private async fetchTracks(node: any, search: string): Promise<LavalinkResponse> {
+		const res = await node.rest.get(`/v4/loadtracks?identifier=${encodeURIComponent(search)}`) as LavalinkResponse;
+		if (!res) throw new Error("Query not found.");
+		return res;
+	}
+
+	private handleResponse(res: LavalinkResponse, options: SearchQuery): SearchResult {
+		let searchData = [];
+		let playlistData: PlaylistRawData | undefined;
+
+		switch (res.loadType) {
+			case "search":
+				searchData = res.data as TrackData[];
+				break;
+			case "track":
+				searchData = [res.data as TrackData[]];
+				break;
+			case "playlist":
+				playlistData = res.data as PlaylistRawData;
+				break;
+		}
+
+		const tracks = searchData.map((track) => TrackUtils.build(track, options.requester));
+		let playlist = null;
+
+		if (res.loadType === "playlist") {
+			playlist = {
+				name: playlistData.info.name,
+				tracks: playlistData.tracks.map((track) => TrackUtils.build(track, options.requester)),
+				duration: playlistData.tracks.reduce((acc, cur) => acc + (cur.info.length || 0), 0),
+			};
+		}
+
+		const result: SearchResult = {
+			loadType: res.loadType,
+			tracks,
+			playlist,
+		};
+
+		this.replaceYouTubeCredentials(result);
+
+		return result;
+	}
+
+	private replaceYouTubeCredentials(result: SearchResult): void {
+		if (this.options.replaceYouTubeCredentials) {
+			let tracksToReplace: Track[] = [];
+			if (result.loadType === "playlist") {
+				tracksToReplace = result.playlist.tracks;
+			} else {
+				tracksToReplace = result.tracks;
+			}
+
+			for (const track of tracksToReplace) {
+				if (this.YOUTUBE_REGEX.test(track.uri)) {
+					track.author = track.author.replace("- Topic", "");
+					track.title = track.title.replace("Topic -", "");
+				}
+				if (track.title.includes("-")) {
+					const [author, title] = track.title.split("-").map((str: string) => str.trim());
+					track.author = author;
+					track.title = title;
+				}
+			}
+		}
+	}
+
+	private cacheResult(res: LavalinkResponse, code: string, result: SearchResult): void {
+		if (res.loadType === "search" || res.loadType === "track") {
+			this.search_cache.set(code, result);
+		}
+	}
 	private CheckURL(uri: string): string {
 		let data = this.regex_link(uri);
-		switch (data) {
-			case "yt":
-				const videoCode = uri.match(/v=([^&]+)/)?.[1];
-				const playlistCode = uri.match(/list=([^&]+)/)?.[1];
-				if (playlistCode) {
-					return "yt:playlist:" + playlistCode;
-				}
-				return "yt:" + (videoCode ?? "");
+		if (!data) return uri;
+		if (data === "yt") {
+			const videoCode = uri.match(/v=([^&]+)/)?.[1];
+			const playlistCode = uri.match(/list=([^&]+)/)?.[1];
+			if (playlistCode) {
+				return `yt:playlist:${playlistCode}`;
+			}
+			return "yt:" + (videoCode ?? "");
 		}
 		return uri;
 	}
-	
+
 	private isLink(link: string) {
 		return /^(https?:\/\/)?(www\.)?([a-zA-Z0-9]+)\.([a-zA-Z0-9]+)\/.+$/.test(link);
 	}
-	
+
 	private regex_link(link: string) {
 		if (this.YOUTUBE_REGEX.test(link)) return "yt";
 		if (this.SOUNDCLOUD_REGEX.test(link)) return "sc";
@@ -277,7 +316,7 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 		if (this.isLink(link)) return "http";
 		return null;
 	}
-	
+
 	/**
 	 * Decodes the base64 encoded tracks and returns a TrackData array.
 	 * @param tracks
@@ -395,9 +434,17 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 
 		this.emit("PlayerDisconnect", player, player.voiceChannel);
 		player.voiceChannel = null;
-		player.voiceState = Object.assign({});
-		player.destroy();
-		return;
+		player.voiceState = {
+			channel_id: null,
+			guildId: undefined,
+			sessionId: null,
+			event: null,
+			op: "voiceUpdate",
+			session_id: null,
+			user_id: null,
+			guild_id: null,
+		}
+		return player.destroy();
 	}
 }
 
@@ -456,7 +503,7 @@ string literals. The type can only have one of the specified values:
 
 export interface SearchQuery {
 	/** The source to search from. */
-	source?: SearchPlatform | string;
+	source?: SearchPlatform;
 	/** The query to search for. */
 	query: string;
 	requester?: User | ClientUser;

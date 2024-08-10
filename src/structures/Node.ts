@@ -44,12 +44,9 @@ export class Node {
 		if (!this.manager) this.manager = Structure.get("Node")._manager;
 		if (!this.manager) throw new RangeError("Manager has not been initiated.");
 
-		if (this.manager.nodes.has(options.identifier || options.host)) {
-			return this.manager.nodes.get(options.identifier || options.host);
-		}
+		if (this.manager.nodes.has(options.identifier || options.host)) return this.manager.nodes.get(options.identifier || options.host);
 
 		nodeCheck(options);
-
 		this.options = {
 			port: 2333,
 			password: "youshallnotpass",
@@ -96,12 +93,12 @@ export class Node {
 	public connect(): void {
 		if (this.connected) return;
 
-		const headers = Object.assign({
+		const headers = {
 			Authorization: this.options.password,
 			"Num-Shards": String(this.manager.options.shards),
 			"User-Id": this.manager.options.clientId,
 			"Client-Name": this.manager.options.clientName,
-		});
+		};
 
 		this.socket = new WebSocket(`ws${this.options.secure ? "s" : ""}://${this.address}/v4/websocket`, { headers });
 		this.socket.on("open", this.open.bind(this));
@@ -276,38 +273,27 @@ export class Node {
 	// Handle autoplay
 	private async handleAutoplay(player: Player, track: Track) {
 		const previousTrack = player.queue.previous;
-
 		if (!player.isAutoplay || !previousTrack) return;
-
 		const hasYouTubeURL = ["youtube.com", "youtu.be"].some((url) => previousTrack.uri.includes(url));
-
 		let videoID = previousTrack.uri.substring(previousTrack.uri.indexOf("=") + 1);
 
 		if (!hasYouTubeURL) {
 			const res = await player.search(`${previousTrack.author} - ${previousTrack.title}`);
-
 			videoID = res.tracks[0].uri.substring(res.tracks[0].uri.indexOf("=") + 1);
 		}
-
 		let randomIndex: number;
 		let searchURI: string;
-
 		do {
 			randomIndex = Math.floor(Math.random() * 23) + 2;
 			searchURI = `https://www.youtube.com/watch?v=${videoID}&list=RD${videoID}&index=${randomIndex}`;
 		} while (track.uri.includes(searchURI));
 
 		const res = await player.search(searchURI, player.get("Internal_BotUser"));
-
 		if (res.loadType === "empty" || res.loadType === "error") return;
-
 		let tracks = res.tracks;
-
-		if (res.loadType === "playlist") {
-			tracks = res.playlist.tracks;
-		}
-
-		const foundTrack = tracks.sort(() => Math.random() - 0.5).find((shuffledTrack) => shuffledTrack.uri !== track.uri);
+		if (res.loadType === "playlist") tracks = res.playlist.tracks;
+		const sortedTracks = tracks.toSorted(() => Math.random() - 0.5);
+		const foundTrack = sortedTracks.find((shuffledTrack) => shuffledTrack.uri !== track.uri);
 
 		if (foundTrack) {
 			player.queue.add(foundTrack);
@@ -345,7 +331,7 @@ export class Node {
 
 		this.manager.emit("TrackEnd", player, track, payload);
 
-		if (payload.reason === "stopped" && !(queue.current = queue.shift())) {
+		if (payload.reason === "stopped") {
 			this.queueEnd(player, track, payload);
 			return;
 		}

@@ -40,35 +40,54 @@ manager.on("PlayerCreate", (player) => {
 manager.on("NodeError" , (node, error) => {
     console.log(`Node ${node.options.host} has an error: ${error.message}`);
 });
+
+// Helper function to handle the 'play' command
+async function handlePlayCommand(message: any, args: string[]) {
+    if (!message.member?.voice.channel) return message.reply('you need to join a voice channel.');
+    if (!args.length) return message.reply('you need to give me a URL or a search term.');
+    
+    const search = args.join(' ');
+    const start = performance.now();
+    let res;
+    let end;
+    
+    try {
+        res = await searchTracks(search);
+        end = `Time took: ${Math.round(performance.now() - start)}ms.`;
+    } catch (err) {
+        return message.reply(`there was an error while searching: ${err}`);
+    }
+    
+    if (res.loadType === 'error') return message.reply('there was no tracks found with that query.');
+    
+    const player = manager.create({
+        guild: message.guild?.id as string,
+        voiceChannel: message.member?.voice.channel.id,
+        textChannel: message.channel.id,
+        volume: 100,
+    });
+    
+    player.connect();
+    player.queue.add(res.tracks[0]);
+    if (!player.playing && !player.paused && !player.queue.size) player.play();
+    
+    return message.reply(`enqueuing ${res.tracks[0].title}. ${end}`);
+}
+
+// Helper function to handle the search logic
+async function searchTracks(search: string) {
+    const res = await manager.search({ query: search });
+    if (res.loadType === 'empty') throw res;
+    if (res.loadType === 'playlist') throw Error('Playlists are not supported with this command.');
+    return res;
+}
+
 client.on("messageCreate", async (message) => {
     if (message.author.bot) return;
-    const start = performance.now();
+    
     const [command, ...args] = message.content.slice(0).split(/\s+/g);
     if (command === 'play') {
-        if (!message.member?.voice.channel) return message.reply('you need to join a voice channel.');
-        if (!args.length) return message.reply('you need to give me a URL or a search term.');
-        const search = args.join(' ');
-        let res;
-        let end;
-        try {
-            res = await manager.search({query: search});
-            end = `Time took: ${Math.round(performance.now() - start)}ms.`;
-            if (res.loadType === 'empty') throw res;
-            if (res.loadType === 'playlist') throw Error('Playlists are not supported with this command.');
-        } catch (err) {
-            return message.reply(`there was an error while searching: ${err}`);
-        }
-        if (res.loadType === 'error') return message.reply('there was no tracks found with that query.');
-        const player = manager.create({
-            guild: message.guild?.id as string,
-            voiceChannel: message.member?.voice.channel.id,
-            textChannel: message.channel.id,
-            volume: 100,
-        });
-        player.connect();
-        player.queue.add(res.tracks[0]);
-        if (!player.playing && !player.paused && !player.queue.size) player.play();
-        return message.reply(`enqueuing ${res.tracks[0].title}. ${end}`);
+        await handlePlayCommand(message, args);
     }
 });
 manager.on("SearchCacheClear" , (data) => {

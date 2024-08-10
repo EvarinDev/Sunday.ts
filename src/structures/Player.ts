@@ -8,7 +8,7 @@ import { ClientUser, Message, User } from "discord.js";
 
 export class Player {
 	/** The Queue for the Player. */
-	public readonly queue = new (Structure.get("Queue"))() as Queue;
+	public readonly queue: Queue = new (Structure.get("Queue"))();
 	/** The filters applied to the audio. */
 	public filters: Filters;
 	/** Whether the queue repeats the track. */
@@ -80,9 +80,7 @@ export class Player {
 		if (!this.manager) this.manager = Structure.get("Player")._manager;
 		if (!this.manager) throw new RangeError("Manager has not been initiated.");
 
-		if (this.manager.players.has(options.guild)) {
-			return this.manager.players.get(options.guild);
-		}
+		if (this.manager.players.has(options.guild)) return this.manager.players.get(options.guild);
 
 		playerCheck(options);
 
@@ -97,9 +95,7 @@ export class Player {
 
 		const node = this.manager.nodes.get(options.node);
 		this.node = node || this.manager.useableNodes;
-
 		if (!this.node) throw new RangeError("No available nodes.");
-
 		this.manager.players.set(options.guild, this);
 		this.manager.emit("PlayerCreate", this);
 		this.setVolume(options.volume ?? 100);
@@ -196,10 +192,9 @@ export class Player {
 
 	/** Sets the now playing message. */
 	public setNowPlayingMessage(message: Message): Message {
-		if (!message) {
-			throw new TypeError("You must provide the message of the now playing message.");
-		}
-		return (this.nowPlayingMessage = message);
+		if (!message) throw new TypeError("You must provide the message of the now playing message.");
+		this.nowPlayingMessage = message;
+		return message;
 	}
 
 	/** Plays the next track. */
