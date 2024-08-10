@@ -206,7 +206,7 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 		const _query: SearchQuery = typeof options.query === "string" ? { query: options.query } : options.query;
 		const _source = Manager.DEFAULT_SOURCES[_query.source ?? this.options.defaultSearchPlatform] ?? _query.source;
 		let search = _query.query;
-		let code = this.CheckURL(options.query);
+		const code = this.CheckURL(options.query);
 		if (!/^https?:\/\//.test(search)) search = `${_source}:${search}`;
 		return { search, code };
 	}
@@ -219,7 +219,7 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 		return null;
 	}
 
-	private async fetchTracks(node: any, search: string): Promise<LavalinkResponse> {
+	private async fetchTracks(node: Node, search: string): Promise<LavalinkResponse> {
 		const res = await node.rest.get(`/v4/loadtracks?identifier=${encodeURIComponent(search)}`) as LavalinkResponse;
 		if (!res) throw new Error("Query not found.");
 		return res;
@@ -292,7 +292,7 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 		}
 	}
 	private CheckURL(uri: string): string {
-		let data = this.regex_link(uri);
+		const data = this.regex_link(uri);
 		if (!data) return uri;
 		if (data === "yt") {
 			const videoCode = uri.match(/v=([^&]+)/)?.[1];

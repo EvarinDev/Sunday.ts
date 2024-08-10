@@ -325,10 +325,8 @@ export class Node {
 		} else if (queueRepeat) {
 			queue.add(queue.current);
 		}
-
 		queue.previous = queue.current;
 		queue.current = queue.shift();
-
 		this.manager.emit("TrackEnd", player, track, payload);
 
 		if (payload.reason === "stopped") {

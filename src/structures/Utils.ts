@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-var-requires*/
+/* eslint-disable @typescript-eslint/no-unused-vars*/
 import { ClientUser, User } from "discord.js";
 import { Manager } from "./Manager";
 import { Node, NodeStats } from "./Node";
@@ -219,9 +219,9 @@ export class Plugin {
 }
 
 const structures = {
-	Player: require("./Player").Player,
-	Queue: require("./Queue").Queue,
-	Node: require("./Node").Node,
+	Player: Player,
+	Queue: Queue,
+	Node: Node,
 };
 
 export interface UnresolvedQuery {
