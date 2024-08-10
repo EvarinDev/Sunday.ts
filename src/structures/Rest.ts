@@ -33,7 +33,7 @@ export class Rest {
 	}
 
 	/** Sends a PATCH request to update player related data. */
-	public async updatePlayer(options: playOptions): Promise<unknown> {
+	public async updatePlayer(options: PlayOptions): Promise<unknown> {
 		return await this.patch(`/v4/sessions/${this.sessionId}/players/${options.guildId}?noReplace=false`, options.data);
 	}
 
@@ -85,7 +85,7 @@ export class Rest {
 	}
 }
 
-interface playOptions {
+interface PlayOptions {
 	guildId: string;
 	data: {
 		/** The base64 encoded track. */

@@ -36,7 +36,6 @@ export class Queue extends Array<Track | UnresolvedTrack> {
 		if (!TrackUtils.validate(track)) {
 			throw new RangeError('Track must be a "Track" or "Track[]".');
 		}
-
 		if (!this.current) {
 			if (Array.isArray(track)) {
 				this.current = track.shift() || null;
@@ -60,7 +59,8 @@ export class Queue extends Array<Track | UnresolvedTrack> {
 					this.splice(offset, 0, track);
 				}
 			} else {
-				if (Array.isArray(track)) {
+				const isArray = Array.isArray(track);
+				if (isArray) {
 					this.push(...track);
 				} else {
 					this.push(track);
