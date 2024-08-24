@@ -18,6 +18,10 @@ let manager = new Manager({
             password: 'youshallnotpass',
         },
     ],
+    caches: {
+        enabled: true,
+        time: 60000,
+    },
     clientId: "1234567890",
     send(guild_id, payload) {
         const guild = client.guilds.cache.get(guild_id);
