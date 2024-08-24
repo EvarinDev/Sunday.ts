@@ -53,7 +53,7 @@ export class Rest {
 				},
 				body: JSON.stringify(body),
 			});
-			return JSON.parse(await response.text());
+			return await response.json();
 		} catch(error) {
 			if (error?.response?.status === 404) {
 				this.node.destroy();

@@ -2,14 +2,13 @@
   "name": "sunday.ts",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "description": "Sunday a lavalink wrapper",
   "license": "MIT",
   "author": "FAYStarNext",
   "scripts": {
     "build:js": "npx babel src --out-dir dist --extensions \".ts,.tsx\" --source-maps inline",
     "lint": "npx eslint src/**/*.ts",
-    "test:connect": "bun test/connect.ts",
     "test:manager": "bun test/manager.ts",
     "test:player": "bun test/player.ts"
   },
