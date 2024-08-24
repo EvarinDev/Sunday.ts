@@ -2,7 +2,7 @@
   "name": "sunday.ts",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "description": "Sunday a lavalink wrapper",
   "license": "MIT",
   "author": "FAYStarNext",
