@@ -45,6 +45,7 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 	/** The options that were set. */
 	public readonly options: ManagerOptions;
 	private initiated = false;
+	public caches = new Collection<string, SearchResult>();
 
 	/** Returns the nodes that has the least load. */
 	private get leastLoadNode(): Collection<string, Node> {
@@ -120,7 +121,7 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 			shards: 1,
 			autoPlay: true,
 			usePriority: false,
-			clientName: "Magmastream",
+			clientName: "Sunday.ts (https://github.com/EwarinDev/Sunday.ts)",
 			defaultSearchPlatform: "youtube",
 			useNode: "leastPlayers",
 			...options,
@@ -174,10 +175,12 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 		if (!node) {
 			throw new Error("No available nodes.");
 		}
-
+		if (this.options.caches.enabled && this.options.caches.time > 0 && typeof query === "string") {
+			let data = this.caches.get(query);
+			if (data) return data;
+		}
 		const _query: SearchQuery = typeof query === "string" ? { query } : query;
 		const _source = Manager.DEFAULT_SOURCES[_query.source ?? this.options.defaultSearchPlatform] ?? _query.source;
-
 		let search = _query.query;
 
 		if (!/^https?:\/\//.test(search)) {
@@ -245,7 +248,7 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 					}
 				}
 			}
-
+			if (this.options.caches.enabled && this.options.caches.time > 0) this.caches.set(search, result);
 			return result;
 		} catch (err) {
 			throw new Error(err);
@@ -418,6 +421,12 @@ export interface ManagerOptions {
 	defaultSearchPlatform?: SearchPlatform;
 	/** Whether the YouTube video titles should be replaced if the Author does not exactly match. */
 	replaceYouTubeCredentials?: boolean;
+	caches?: {
+		/** Whether to cache the search results. */
+		enabled: boolean;
+		/** The time to cache the search results. */
+		time: number;
+	}
 	/**
 	 * Function to send data to the websocket.
 	 * @param id
