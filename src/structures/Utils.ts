@@ -92,14 +92,7 @@ export abstract class TrackUtils {
 					return this.uri.includes("youtube") ? `https://img.youtube.com/vi/${data.info.identifier}/${finalSize}.jpg` : null;
 				},
 				requester,
-				pluginInfo: {
-					albumName: data.pluginInfo?.albumName,
-					albumUrl: data.pluginInfo?.albumUrl,
-					artistArtworkUrl: data.pluginInfo?.artistArtworkUrl,
-					artistUrl: data.pluginInfo?.artistUrl,
-					isPreview: data.pluginInfo?.isPreview,
-					previewUrl: data.pluginInfo?.previewUrl,
-				},
+				pluginInfo: data.pluginInfo,
 				customData: {},
 			};
 
@@ -157,10 +150,7 @@ export abstract class TrackUtils {
 		if (!TrackUtils.isUnresolvedTrack(unresolvedTrack)) throw new RangeError("Provided track is not a UnresolvedTrack.");
 
 		const query = unresolvedTrack.uri ? unresolvedTrack.uri : [unresolvedTrack.author, unresolvedTrack.title].filter(Boolean).join(" - ");
-		const res = await TrackUtils.manager.search({
-			query,
-			requester: unresolvedTrack.requester,
-		});
+		const res = await TrackUtils.manager.search(query, unresolvedTrack.requester);
 
 		if (unresolvedTrack.author) {
 			const channelNames = [unresolvedTrack.author, `${unresolvedTrack.author} - Topic`];
@@ -214,14 +204,13 @@ export abstract class Structure {
 
 export class Plugin {
 	public load(manager: Manager): void {}
-
 	public unload(manager: Manager): void {}
 }
 
 const structures = {
-	Player: Player,
-	Queue: Queue,
-	Node: Node,
+	Player: (await import("./Player")).Player,
+	Queue: (await import("./Queue")).Queue,
+	Node: (await import("./Node")).Node,
 };
 
 export interface UnresolvedQuery {

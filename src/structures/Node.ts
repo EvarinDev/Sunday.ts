@@ -1,5 +1,15 @@
-import { PlayerEvent, PlayerEvents, Structure, TrackEndEvent, TrackExceptionEvent, TrackStartEvent, TrackStuckEvent, WebSocketClosedEvent } from "./Utils";
-import { Manager } from "./Manager";
+import {
+	PlayerEvent,
+	PlayerEvents,
+	Structure,
+	TrackEndEvent,
+	TrackExceptionEvent,
+	TrackStartEvent,
+	TrackStuckEvent,
+	TrackUtils,
+	WebSocketClosedEvent,
+} from "./Utils";
+import { LavalinkResponse, Manager, PlaylistRawData } from "./Manager";
 import { Player, Track, UnresolvedTrack } from "./Player";
 import { Rest } from "./Rest";
 import nodeCheck from "../utils/nodeCheck";
@@ -44,9 +54,12 @@ export class Node {
 		if (!this.manager) this.manager = Structure.get("Node")._manager;
 		if (!this.manager) throw new RangeError("Manager has not been initiated.");
 
-		if (this.manager.nodes.has(options.identifier || options.host)) return this.manager.nodes.get(options.identifier || options.host);
+		if (this.manager.nodes.has(options.identifier || options.host)) {
+			return this.manager.nodes.get(options.identifier || options.host);
+		}
 
 		nodeCheck(options);
+
 		this.options = {
 			port: 2333,
 			password: "youshallnotpass",
@@ -93,12 +106,12 @@ export class Node {
 	public connect(): void {
 		if (this.connected) return;
 
-		const headers = {
+		const headers = Object.assign({
 			Authorization: this.options.password,
 			"Num-Shards": String(this.manager.options.shards),
 			"User-Id": this.manager.options.clientId,
 			"Client-Name": this.manager.options.clientName,
-		};
+		});
 
 		this.socket = new WebSocket(`ws${this.options.secure ? "s" : ""}://${this.address}/v4/websocket`, { headers });
 		this.socket.on("open", this.open.bind(this));
@@ -115,7 +128,8 @@ export class Node {
 		if (players.size) players.forEach((p) => p.destroy());
 
 		this.socket.close(1000, "destroy");
-		this.socket.removeListener("close", this.close.bind(this));
+		// @ts-ignore
+		this.socket.removeAllListeners();
 		this.socket = null;
 
 		this.reconnectAttempts = 1;
@@ -133,12 +147,13 @@ export class Node {
 				this.manager.emit("NodeError", this, error);
 				return this.destroy();
 			}
-			this.socket.removeListener("close", this.close.bind(this));
+			// @ts-ignore
+			this.socket?.removeAllListeners();
 			this.socket = null;
 			this.manager.emit("NodeReconnect", this);
 			this.connect();
 			this.reconnectAttempts++;
-		}, this.options.retryDelay) as NodeJS.Timeout;
+		}, this.options.retryDelay) as unknown as NodeJS.Timeout;
 	}
 
 	protected open(): void {
@@ -270,32 +285,106 @@ export class Node {
 		}
 	}
 
+	public extractSpotifyTrackID(url: string): string | null {
+		const regex = /https:\/\/open\.spotify\.com\/track\/([a-zA-Z0-9]+)/;
+		const match = url.match(regex);
+		return match ? match[1] : null;
+	}
+
+	public extractSpotifyArtistID(url: string): string | null {
+		const regex = /https:\/\/open\.spotify\.com\/artist\/([a-zA-Z0-9]+)/;
+		const match = url.match(regex);
+		return match ? match[1] : null;
+	}
+
 	// Handle autoplay
 	private async handleAutoplay(player: Player, track: Track) {
 		const previousTrack = player.queue.previous;
+
 		if (!player.isAutoplay || !previousTrack) return;
+
+		const hasSpotifyURL = ["spotify.com", "open.spotify.com"].some((url) => previousTrack.uri.includes(url));
+
+		if (hasSpotifyURL) {
+			const node = this.manager.useableNodes;
+
+			const res = await node.rest.get(`/v4/info`);
+			const info = res as LavalinkInfo;
+
+			const isSpotifyPluginEnabled = info.plugins.some((plugin: { name: string }) => plugin.name === "lavasrc-plugin");
+			const isSpotifySourceManagerEnabled = info.sourceManagers.includes("spotify");
+
+			if (isSpotifyPluginEnabled && isSpotifySourceManagerEnabled) {
+				const trackID = this.extractSpotifyTrackID(previousTrack.uri);
+				const artistID = this.extractSpotifyArtistID(previousTrack.pluginInfo.artistUrl);
+
+				let identifier = "";
+				if (trackID && artistID) {
+					identifier = `sprec:seed_artists=${artistID}&seed_tracks=${trackID}`;
+				} else if (trackID) {
+					identifier = `sprec:seed_tracks=${trackID}`;
+				} else if (artistID) {
+					identifier = `sprec:seed_artists=${artistID}`;
+				}
+
+				if (identifier) {
+					const recommendedResult = (await node.rest.get(`/v4/loadtracks?identifier=${encodeURIComponent(identifier)}`)) as LavalinkResponse;
+
+					if (recommendedResult.loadType === "playlist") {
+						const playlistData = recommendedResult.data as PlaylistRawData;
+						const recommendedTrack = playlistData.tracks[0];
+
+						if (recommendedTrack) {
+							player.queue.add(TrackUtils.build(recommendedTrack, player.get("Internal_BotUser")));
+							player.play();
+							return;
+						}
+					}
+				}
+			}
+		}
+
 		const hasYouTubeURL = ["youtube.com", "youtu.be"].some((url) => previousTrack.uri.includes(url));
+
 		let videoID = previousTrack.uri.substring(previousTrack.uri.indexOf("=") + 1);
 
 		if (!hasYouTubeURL) {
-			const res = await player.search(`${previousTrack.author} - ${previousTrack.title}`);
+			const res = await player.search(`${previousTrack.author} - ${previousTrack.title}`, player.get("Internal_BotUser"));
+
 			videoID = res.tracks[0].uri.substring(res.tracks[0].uri.indexOf("=") + 1);
 		}
+
 		let randomIndex: number;
 		let searchURI: string;
+
 		do {
 			randomIndex = Math.floor(Math.random() * 23) + 2;
 			searchURI = `https://www.youtube.com/watch?v=${videoID}&list=RD${videoID}&index=${randomIndex}`;
 		} while (track.uri.includes(searchURI));
 
 		const res = await player.search(searchURI, player.get("Internal_BotUser"));
+
 		if (res.loadType === "empty" || res.loadType === "error") return;
+
 		let tracks = res.tracks;
-		if (res.loadType === "playlist") tracks = res.playlist.tracks;
-		const sortedTracks = tracks.toSorted(() => Math.random() - 0.5);
-		const foundTrack = sortedTracks.find((shuffledTrack) => shuffledTrack.uri !== track.uri);
+
+		if (res.loadType === "playlist") {
+			tracks = res.playlist.tracks;
+		}
+
+		const foundTrack = tracks.sort(() => Math.random() - 0.5).find((shuffledTrack) => shuffledTrack.uri !== track.uri);
 
 		if (foundTrack) {
+			if (this.manager.options.replaceYouTubeCredentials) {
+				foundTrack.author = foundTrack.author.replace("- Topic", "");
+				foundTrack.title = foundTrack.title.replace("Topic -", "");
+
+				if (foundTrack.title.includes("-")) {
+					const [author, title] = foundTrack.title.split("-").map((str: string) => str.trim());
+					foundTrack.author = author;
+					foundTrack.title = title;
+				}
+			}
 			player.queue.add(foundTrack);
 			player.play();
 		}
@@ -325,11 +414,13 @@ export class Node {
 		} else if (queueRepeat) {
 			queue.add(queue.current);
 		}
+
 		queue.previous = queue.current;
 		queue.current = queue.shift();
+
 		this.manager.emit("TrackEnd", player, track, payload);
 
-		if (payload.reason === "stopped") {
+		if (payload.reason === "stopped" && !(queue.current = queue.shift())) {
 			this.queueEnd(player, track, payload);
 			return;
 		}
@@ -443,4 +534,15 @@ export interface FrameStats {
 	nulled?: number;
 	/** The amount of deficit frames. */
 	deficit?: number;
+}
+
+export interface LavalinkInfo {
+	version: { semver: string; major: number; minor: number; patch: number; preRelease: string };
+	buildTime: number;
+	git: { branch: string; commit: string; commitTime: number };
+	jvm: string;
+	lavaplayer: string;
+	sourceManagers: string[];
+	filters: string[];
+	plugins: { name: string; version: string }[];
 }

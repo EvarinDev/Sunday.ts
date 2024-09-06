@@ -1,4 +1,5 @@
 import { Node } from "./Node";
+import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 
 /** Handles the requests sent to the Lavalink REST API. */
 export class Rest {
@@ -33,7 +34,7 @@ export class Rest {
 	}
 
 	/** Sends a PATCH request to update player related data. */
-	public async updatePlayer(options: PlayOptions): Promise<unknown> {
+	public async updatePlayer(options: playOptions): Promise<unknown> {
 		return await this.patch(`/v4/sessions/${this.sessionId}/players/${options.guildId}?noReplace=false`, options.data);
 	}
 
@@ -43,18 +44,21 @@ export class Rest {
 	}
 
 	/* Sends a GET request to the specified endpoint and returns the response data. */
-	private async request(method: "GET" | "POST" | "PATCH" | "DELETE", endpoint: string, body?: unknown): Promise<unknown> {
+	private async request(method: string, endpoint: string, body?: unknown): Promise<unknown> {
+		const config: AxiosRequestConfig = {
+			method,
+			url: this.url + endpoint,
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: this.password,
+			},
+			data: body,
+		};
+
 		try {
-			const response = await fetch(this.url + endpoint, {
-				method,
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: this.password,
-				},
-				body: JSON.stringify(body),
-			});
-			return await response.json();
-		} catch(error) {
+			const response = await axios(config) as AxiosResponse
+			return response.data;
+		} catch (error) {
 			if (error?.response?.status === 404) {
 				this.node.destroy();
 				this.node.manager.createNode(this.node.options).connect();
@@ -85,7 +89,7 @@ export class Rest {
 	}
 }
 
-interface PlayOptions {
+interface playOptions {
 	guildId: string;
 	data: {
 		/** The base64 encoded track. */

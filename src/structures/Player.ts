@@ -1,14 +1,15 @@
 import { Filters } from "./Filters";
-import { Manager, SearchQuery, SearchResult } from "./Manager";
-import { Node } from "./Node";
+import { LavalinkResponse, Manager, PlaylistRawData, SearchQuery, SearchResult } from "./Manager";
+import { LavalinkInfo, Node } from "./Node";
 import { Queue } from "./Queue";
 import { Sizes, State, Structure, TrackSourceName, TrackUtils, VoiceState } from "./Utils";
+import * as _ from "lodash";
 import playerCheck from "../utils/playerCheck";
 import { ClientUser, Message, User } from "discord.js";
 
 export class Player {
 	/** The Queue for the Player. */
-	public readonly queue: Queue = new (Structure.get("Queue"))();
+	public readonly queue = new (Structure.get("Queue"))() as Queue;
 	/** The filters applied to the audio. */
 	public filters: Filters;
 	/** Whether the queue repeats the track. */
@@ -48,7 +49,7 @@ export class Player {
 
 	private static _manager: Manager;
 	private readonly data: Record<string, unknown> = {};
-	private dynamicLoopInterval: NodeJS.Timeout | null = null;
+	private dynamicLoopInterval: NodeJS.Timeout;
 
 	/**
 	 * Set custom data.
@@ -80,7 +81,9 @@ export class Player {
 		if (!this.manager) this.manager = Structure.get("Player")._manager;
 		if (!this.manager) throw new RangeError("Manager has not been initiated.");
 
-		if (this.manager.players.has(options.guild)) return this.manager.players.get(options.guild);
+		if (this.manager.players.has(options.guild)) {
+			return this.manager.players.get(options.guild);
+		}
 
 		playerCheck(options);
 
@@ -95,7 +98,9 @@ export class Player {
 
 		const node = this.manager.nodes.get(options.node);
 		this.node = node || this.manager.useableNodes;
+
 		if (!this.node) throw new RangeError("No available nodes.");
+
 		this.manager.players.set(options.guild, this);
 		this.manager.emit("PlayerCreate", this);
 		this.setVolume(options.volume ?? 100);
@@ -108,10 +113,7 @@ export class Player {
 	 * @param requester
 	 */
 	public search(query: string | SearchQuery, requester?: User | ClientUser): Promise<SearchResult> {
-		return this.manager.search({
-			query: query as string,
-			requester: requester,
-		});
+		return this.manager.search(query, requester);
 	}
 
 	/** Connect to the voice channel. */
@@ -192,9 +194,10 @@ export class Player {
 
 	/** Sets the now playing message. */
 	public setNowPlayingMessage(message: Message): Message {
-		if (!message) throw new TypeError("You must provide the message of the now playing message.");
-		this.nowPlayingMessage = message;
-		return message;
+		if (!message) {
+			throw new TypeError("You must provide the message of the now playing message.");
+		}
+		return (this.nowPlayingMessage = message);
 	}
 
 	/** Plays the next track. */
@@ -229,8 +232,8 @@ export class Player {
 		const finalOptions = playOptions
 			? playOptions
 			: ["startTime", "endTime", "noReplace"].every((v) => Object.keys(optionsOrTrack || {}).includes(v))
-				? (optionsOrTrack as PlayOptions)
-				: {};
+			? (optionsOrTrack as PlayOptions)
+			: {};
 
 		if (TrackUtils.isUnresolvedTrack(this.queue.current)) {
 			try {
@@ -271,6 +274,96 @@ export class Player {
 		this.set("Internal_BotUser", botUser);
 
 		return this;
+	}
+
+	/**
+	 * Gets recommended tracks and returns an array of tracks.
+	 * @param track
+	 * @param requester
+	 */
+	public async getRecommended(track: Track, requester?: User | ClientUser) {
+		const node = this.manager.useableNodes;
+
+		if (!node) {
+			throw new Error("No available nodes.");
+		}
+
+		const hasSpotifyURL = ["spotify.com", "open.spotify.com"].some((url) => track.uri.includes(url));
+		const hasYouTubeURL = ["youtube.com", "youtu.be"].some((url) => track.uri.includes(url));
+
+		if (hasSpotifyURL) {
+			const res = await node.rest.get(`/v4/info`);
+			const info = res as LavalinkInfo;
+
+			const isSpotifyPluginEnabled = info.plugins.some((plugin: { name: string }) => plugin.name === "lavasrc-plugin");
+			const isSpotifySourceManagerEnabled = info.sourceManagers.includes("spotify");
+
+			if (isSpotifyPluginEnabled && isSpotifySourceManagerEnabled) {
+				const trackID = node.extractSpotifyTrackID(track.uri);
+				const artistID = node.extractSpotifyArtistID(track.pluginInfo.artistUrl);
+
+				let identifier = "";
+				if (trackID && artistID) {
+					identifier = `sprec:seed_artists=${artistID}&seed_tracks=${trackID}`;
+				} else if (trackID) {
+					identifier = `sprec:seed_tracks=${trackID}`;
+				} else if (artistID) {
+					identifier = `sprec:seed_artists=${artistID}`;
+				}
+
+				if (identifier) {
+					const recommendedResult = (await node.rest.get(`/v4/loadtracks?identifier=${encodeURIComponent(identifier)}`)) as LavalinkResponse;
+
+					if (recommendedResult.loadType === "playlist") {
+						const playlistData = recommendedResult.data as PlaylistRawData;
+						const recommendedTracks = playlistData.tracks;
+
+						if (recommendedTracks) {
+							const tracks = recommendedTracks.map((track) => TrackUtils.build(track, requester));
+
+							return tracks;
+						}
+					}
+				}
+			}
+		}
+
+		let videoID = track.uri.substring(track.uri.indexOf("=") + 1);
+
+		if (!hasYouTubeURL) {
+			const res = await this.manager.search(`${track.author} - ${track.title}`);
+
+			videoID = res.tracks[0].uri.substring(res.tracks[0].uri.indexOf("=") + 1);
+		}
+
+		const searchURI = `https://www.youtube.com/watch?v=${videoID}&list=RD${videoID}`;
+
+		const res = await this.manager.search(searchURI);
+
+		if (res.loadType === "empty" || res.loadType === "error") return;
+
+		let tracks = res.tracks;
+
+		if (res.loadType === "playlist") {
+			tracks = res.playlist.tracks;
+		}
+
+		const filteredTracks = tracks.filter((track) => track.uri !== `https://www.youtube.com/watch?v=${videoID}`);
+
+		if (this.manager.options.replaceYouTubeCredentials) {
+			for (const track of filteredTracks) {
+				track.author = track.author.replace("- Topic", "");
+				track.title = track.title.replace("Topic -", "");
+
+				if (track.title.includes("-")) {
+					const [author, title] = track.title.split("-").map((str: string) => str.trim());
+					track.author = author;
+					track.title = title;
+				}
+			}
+		}
+
+		return filteredTracks;
 	}
 
 	/**
@@ -337,6 +430,7 @@ export class Player {
 		this.manager.emit("PlayerStateUpdate", oldPlayer, this);
 		return this;
 	}
+
 	/**
 	 * Sets the queue to repeat and shuffles the queue after each song.
 	 * @param repeat "true" or "false".
@@ -357,17 +451,10 @@ export class Player {
 			this.trackRepeat = false;
 			this.queueRepeat = false;
 			this.dynamicRepeat = true;
-			function shuffleArray(array: Queue): Queue[] {
-				// Shuffle the array
-				for (let i = array.length - 1; i > 0; i--) {
-					const j = Math.floor(Math.random() * (i + 1));
-					[array[i], array[j]] = [array[j], array[i]];
-				}
-				return [array];
-			}
+
 			this.dynamicLoopInterval = setInterval(() => {
 				if (!this.dynamicRepeat) return;
-				const shuffled = shuffleArray(this.queue);
+				const shuffled = _.shuffle(this.queue);
 				this.queue.clear();
 				shuffled.forEach((track) => {
 					this.queue.add(track);

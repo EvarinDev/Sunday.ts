@@ -36,6 +36,7 @@ export class Queue extends Array<Track | UnresolvedTrack> {
 		if (!TrackUtils.validate(track)) {
 			throw new RangeError('Track must be a "Track" or "Track[]".');
 		}
+
 		if (!this.current) {
 			if (Array.isArray(track)) {
 				this.current = track.shift() || null;
@@ -59,8 +60,7 @@ export class Queue extends Array<Track | UnresolvedTrack> {
 					this.splice(offset, 0, track);
 				}
 			} else {
-				const isArray = Array.isArray(track);
-				if (isArray) {
+				if (Array.isArray(track)) {
 					this.push(...track);
 				} else {
 					this.push(track);
@@ -109,5 +109,34 @@ export class Queue extends Array<Track | UnresolvedTrack> {
 			const j = Math.floor(Math.random() * (i + 1));
 			[this[i], this[j]] = [this[j], this[i]];
 		}
+	}
+
+	public equalizedShuffle() {
+		const userTracks = new Map<string, Array<Track | UnresolvedTrack>>();
+
+		this.forEach((track) => {
+			const user = track.requester.id;
+
+			if (!userTracks.has(user)) {
+				userTracks.set(user, []);
+			}
+
+			userTracks.get(user).push(track);
+		});
+
+		const shuffledQueue: Array<Track | UnresolvedTrack> = [];
+
+		while (shuffledQueue.length < this.length) {
+			userTracks.forEach((tracks) => {
+				const track = tracks.shift();
+				if (track) {
+					shuffledQueue.push(track);
+				}
+			});
+		}
+
+		this.clear();
+		this.add(shuffledQueue);
+		console.log(this);
 	}
 }
