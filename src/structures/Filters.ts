@@ -2,13 +2,13 @@ import { Band, bassBoostEqualizer, softEqualizer, trebleBassEqualizer, tvEqualiz
 import { Player } from "./Player";
 
 export class Filters {
-	public distortion: DistortionOptions | null;
+	public distortion: distortionOptions | null;
 	public equalizer: Band[];
-	public karaoke: KaraokeOptions | null;
+	public karaoke: karaokeOptions | null;
 	public player: Player;
-	public rotation: RotationOptions | null;
-	public timescale: TimescaleOptions | null;
-	public vibrato: VibratoOptions | null;
+	public rotation: rotationOptions | null;
+	public timescale: timescaleOptions | null;
+	public vibrato: vibratoOptions | null;
 	public volume: number;
 
 	private filterStatus: {
@@ -68,7 +68,7 @@ export class Filters {
 		return this;
 	}
 
-	private setFilterStatus(filter: keyof AvailableFilters, status: boolean): this {
+	private setFilterStatus(filter: keyof availableFilters, status: boolean): this {
 		this.filterStatus[filter] = status;
 		return this;
 	}
@@ -144,7 +144,7 @@ export class Filters {
 	}
 
 	/** Applies the karaoke options specified by the filter. */
-	public setKaraoke(karaoke?: KaraokeOptions): this {
+	public setKaraoke(karaoke?: karaokeOptions): this {
 		return this.applyFilter({
 			property: "karaoke",
 			value: karaoke,
@@ -152,22 +152,22 @@ export class Filters {
 	}
 
 	/** Applies the timescale options specified by the filter. */
-	public setTimescale(timescale?: TimescaleOptions): this {
+	public setTimescale(timescale?: timescaleOptions): this {
 		return this.applyFilter({ property: "timescale", value: timescale });
 	}
 
 	/** Applies the vibrato options specified by the filter. */
-	public setVibrato(vibrato?: VibratoOptions): this {
+	public setVibrato(vibrato?: vibratoOptions): this {
 		return this.applyFilter({ property: "vibrato", value: vibrato });
 	}
 
 	/** Applies the rotation options specified by the filter. */
-	public setRotation(rotation?: RotationOptions): this {
+	public setRotation(rotation?: rotationOptions): this {
 		return this.applyFilter({ property: "rotation", value: rotation });
 	}
 
 	/** Applies the distortion options specified by the filter. */
-	public setDistortion(distortion?: DistortionOptions): this {
+	public setDistortion(distortion?: distortionOptions): this {
 		return this.applyFilter({ property: "distortion", value: distortion });
 	}
 
@@ -199,13 +199,13 @@ export class Filters {
 	}
 
 	/** Returns the status of the specified filter . */
-	public getFilterStatus(filter: keyof AvailableFilters): boolean {
+	public getFilterStatus(filter: keyof availableFilters): boolean {
 		return this.filterStatus[filter];
 	}
 }
 
 /** Options for adjusting the timescale of audio. */
-interface TimescaleOptions {
+interface timescaleOptions {
 	/** The speed factor for the timescale. */
 	speed?: number;
 	/** The pitch factor for the timescale. */
@@ -215,7 +215,7 @@ interface TimescaleOptions {
 }
 
 /** Options for applying vibrato effect to audio. */
-interface VibratoOptions {
+interface vibratoOptions {
 	/** The frequency of the vibrato effect. */
 	frequency: number;
 	/** * The depth of the vibrato effect.*/
@@ -223,13 +223,13 @@ interface VibratoOptions {
 }
 
 /** Options for applying rotation effect to audio. */
-interface RotationOptions {
+interface rotationOptions {
 	/** The rotation speed in Hertz (Hz). */
 	rotationHz: number;
 }
 
 /** Options for applying karaoke effect to audio. */
-interface KaraokeOptions {
+interface karaokeOptions {
 	/** The level of karaoke effect. */
 	level?: number;
 	/** The mono level of karaoke effect. */
@@ -240,7 +240,7 @@ interface KaraokeOptions {
 	filterWidth?: number;
 }
 
-interface DistortionOptions {
+interface distortionOptions {
 	sinOffset?: number;
 	sinScale?: number;
 	cosOffset?: number;
@@ -251,7 +251,7 @@ interface DistortionOptions {
 	scale?: number;
 }
 
-interface AvailableFilters {
+interface availableFilters {
 	bassboost: boolean;
 	distort: boolean;
 	eightD: boolean;

@@ -14,6 +14,7 @@ import {
 	WebSocketClosedEvent,
 } from "./Utils";
 import { Collection } from "@discordjs/collection";
+import { EventEmitter } from "events";
 import { Node, NodeOptions } from "./Node";
 import { Player, PlayerOptions, Track, UnresolvedTrack } from "./Player";
 import { VoiceState } from "..";
@@ -28,24 +29,22 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 	public static readonly DEFAULT_SOURCES: Record<SearchPlatform, string> = {
 		"youtube music": "ytmsearch",
 		youtube: "ytsearch",
+		spotify: "spsearch",
+		jiosaavn: "jssearch",
 		soundcloud: "scsearch",
 		deezer: "dzsearch",
+		tidal: "tdsearch",
+		applemusic: "amsearch",
+		bandcamp: "bcsearch",
 	};
-	YOUTUBE_REGEX = /https?:\/\/(www\.)?(youtu\.be|youtube\.com|music\.youtube\.com|m\.youtube\.com)/;
-	SOUNDCLOUD_REGEX = /^(https?:\/\/)?(www\.)?(soundcloud\.com)\/.+$/;
-	SPOTIFY_REGEX = /^(https?:\/\/)?(open\.spotify\.com)\/.+$/;
-	BILIBILITV_REGEX = /^(https?:\/\/)?(www\.)?(bilibili\.tv)\/.+$/;
-	JOOX_REGEX = /^(https?:\/\/)?(www\.)?(joox\.com)\/.+$/;
 
 	/** The map of players. */
-	public readonly players: Collection<string, Player> = new Collection<string, Player>();
+	public readonly players = new Collection<string, Player>();
 	/** The map of nodes. */
-	public readonly nodes: Collection<string, Node> = new Collection<string, Node>();
+	public readonly nodes = new Collection<string, Node>();
 	/** The options that were set. */
 	public readonly options: ManagerOptions;
 	private initiated = false;
-	/** The map of search. */
-	public readonly search_cache: Map<string, SearchResult> = new Map<string, SearchResult>();
 
 	/** Returns the nodes that has the least load. */
 	private get leastLoadNode(): Collection<string, Node> {
@@ -87,15 +86,7 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 
 	/** Returns the node to use. */
 	public get useableNodes(): Node {
-		let selectedNode: Node;
-		if (this.options.usePriority) {
-			selectedNode = this.priorityNode;
-		} else if (this.options.useNode === "leastLoad") {
-			selectedNode = this.leastLoadNode.first();
-		} else {
-			selectedNode = this.leastPlayersNode.first();
-		}
-		return selectedNode;
+		return this.options.usePriority ? this.priorityNode : this.options.useNode === "leastLoad" ? this.leastLoadNode.first() : this.leastPlayersNode.first();
 	}
 
 	/**
@@ -129,7 +120,7 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 			shards: 1,
 			autoPlay: true,
 			usePriority: false,
-			clientName: "Sunday.ts",
+			clientName: "Magmastream",
 			defaultSearchPlatform: "youtube",
 			useNode: "leastPlayers",
 			...options,
@@ -142,14 +133,9 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 			}
 		}
 
-		if (this.options.nodes) this.options.nodes.forEach((nodeOptions) => { return new (Structure.get("Node"))(nodeOptions); });
-		if (this.options.caches.enabled) {
-			setInterval(() => {
-				if (this.search_cache.clear() === undefined) return;
-				this.emit("SearchCacheClear", this.search_cache.values().next().value);
-				this.search_cache.clear();
-			}, this.options.caches?.time || 10000);
-		} else return;
+		if (this.options.nodes) {
+			for (const nodeOptions of this.options.nodes) new (Structure.get("Node"))(nodeOptions);
+		}
 	}
 
 	/**
@@ -159,7 +145,9 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 	public init(clientId?: string): this {
 		if (this.initiated) return this;
 		if (typeof clientId !== "undefined") this.options.clientId = clientId;
+
 		if (typeof this.options.clientId !== "string") throw new Error('"clientId" set is not type of "string"');
+
 		if (!this.options.clientId) throw new Error('"clientId" is not set. Pass it in Manager#init() or as a option in the constructor.');
 
 		for (const node of this.nodes.values()) {
@@ -180,141 +168,92 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 	 * @param requester
 	 * @returns The search result.
 	 */
-	// TypeScript
-	public async search(options: SearchQuery): Promise<SearchResult> {
+	public async search(query: string | SearchQuery, requester?: User | ClientUser): Promise<SearchResult> {
 		const node = this.useableNodes;
-		if (!node) throw new Error("No available nodes.");
-		const { search, code } = this.prepareQuery(options);
-		const cachedResult = this.getCachedResult(options, code);
-		if (cachedResult) return cachedResult;
+
+		if (!node) {
+			throw new Error("No available nodes.");
+		}
+
+		const _query: SearchQuery = typeof query === "string" ? { query } : query;
+		const _source = Manager.DEFAULT_SOURCES[_query.source ?? this.options.defaultSearchPlatform] ?? _query.source;
+
+		let search = _query.query;
+
+		if (!/^https?:\/\//.test(search)) {
+			search = `${_source}:${search}`;
+		}
 
 		try {
-			const res = await this.fetchTracks(node, search);
-			const result = this.handleResponse(res, options);
+			const res = (await node.rest.get(`/v4/loadtracks?identifier=${encodeURIComponent(search)}`)) as LavalinkResponse;
 
-			if (options.cache !== false && this.options.caches.enabled !== false) {
-				this.cacheResult(res, code, result);
+			if (!res) {
+				throw new Error("Query not found.");
+			}
+
+			let searchData = [];
+			let playlistData: PlaylistRawData | undefined;
+
+			switch (res.loadType) {
+				case "search":
+					searchData = res.data as TrackData[];
+					break;
+
+				case "track":
+					searchData = [res.data as TrackData[]];
+					break;
+
+				case "playlist":
+					playlistData = res.data as PlaylistRawData;
+					break;
+			}
+
+			const tracks = searchData.map((track) => TrackUtils.build(track, requester));
+			let playlist = null;
+
+			if (res.loadType === "playlist") {
+				playlist = {
+					name: playlistData!.info.name,
+					tracks: playlistData!.tracks.map((track) => TrackUtils.build(track, requester)),
+					duration: playlistData!.tracks.reduce((acc, cur) => acc + (cur.info.length || 0), 0),
+				};
+			}
+
+			const result: SearchResult = {
+				loadType: res.loadType,
+				tracks,
+				playlist,
+			};
+
+			if (this.options.replaceYouTubeCredentials) {
+				let tracksToReplace: Track[] = [];
+				if (result.loadType === "playlist") {
+					tracksToReplace = result.playlist.tracks;
+				} else {
+					tracksToReplace = result.tracks;
+				}
+
+				for (const track of tracksToReplace) {
+					if (isYouTubeURL(track.uri)) {
+						track.author = track.author.replace("- Topic", "");
+						track.title = track.title.replace("Topic -", "");
+					}
+					if (track.title.includes("-")) {
+						const [author, title] = track.title.split("-").map((str: string) => str.trim());
+						track.author = author;
+						track.title = title;
+					}
+				}
 			}
 
 			return result;
 		} catch (err) {
 			throw new Error(err);
 		}
-	}
 
-	private prepareQuery(options: SearchQuery): { search: string, code: string } {
-		const _query: SearchQuery = typeof options.query === "string" ? { query: options.query } : options.query;
-		const _source = Manager.DEFAULT_SOURCES[_query.source ?? this.options.defaultSearchPlatform] ?? _query.source;
-		let search = _query.query;
-		const code = this.CheckURL(options.query);
-		if (!/^https?:\/\//.test(search)) search = `${_source}:${search}`;
-		return { search, code };
-	}
-
-	private getCachedResult(options: SearchQuery, code: string): SearchResult | null {
-		if (options.cache !== false && this.options.caches.enabled !== false) {
-			const cachedResult = this.search_cache.get(code);
-			if (cachedResult) return cachedResult;
+		function isYouTubeURL(uri: string): boolean {
+			return uri.includes("youtube.com") || uri.includes("youtu.be");
 		}
-		return null;
-	}
-
-	private async fetchTracks(node: Node, search: string): Promise<LavalinkResponse> {
-		const res = await node.rest.get(`/v4/loadtracks?identifier=${encodeURIComponent(search)}`) as LavalinkResponse;
-		if (!res) throw new Error("Query not found.");
-		return res;
-	}
-
-	private handleResponse(res: LavalinkResponse, options: SearchQuery): SearchResult {
-		let searchData = [];
-		let playlistData: PlaylistRawData | undefined;
-
-		switch (res.loadType) {
-			case "search":
-				searchData = res.data as TrackData[];
-				break;
-			case "track":
-				searchData = [res.data as TrackData[]];
-				break;
-			case "playlist":
-				playlistData = res.data as PlaylistRawData;
-				break;
-		}
-
-		const tracks = searchData.map((track) => TrackUtils.build(track, options.requester));
-		let playlist = null;
-
-		if (res.loadType === "playlist") {
-			playlist = {
-				name: playlistData.info.name,
-				tracks: playlistData.tracks.map((track) => TrackUtils.build(track, options.requester)),
-				duration: playlistData.tracks.reduce((acc, cur) => acc + (cur.info.length || 0), 0),
-			};
-		}
-
-		const result: SearchResult = {
-			loadType: res.loadType,
-			tracks,
-			playlist,
-		};
-
-		this.replaceYouTubeCredentials(result);
-
-		return result;
-	}
-
-	private replaceYouTubeCredentials(result: SearchResult): void {
-		if (this.options.replaceYouTubeCredentials) {
-			let tracksToReplace: Track[] = [];
-			if (result.loadType === "playlist") {
-				tracksToReplace = result.playlist.tracks;
-			} else {
-				tracksToReplace = result.tracks;
-			}
-
-			for (const track of tracksToReplace) {
-				if (this.YOUTUBE_REGEX.test(track.uri)) {
-					track.author = track.author.replace("- Topic", "");
-					track.title = track.title.replace("Topic -", "");
-				}
-				if (track.title.includes("-")) {
-					const [author, title] = track.title.split("-").map((str: string) => str.trim());
-					track.author = author;
-					track.title = title;
-				}
-			}
-		}
-	}
-
-	private cacheResult(res: LavalinkResponse, code: string, result: SearchResult): void {
-		if (res.loadType === "search" || res.loadType === "track") {
-			this.search_cache.set(code, result);
-		}
-	}
-	private CheckURL(uri: string): string {
-		const data = this.regex_link(uri);
-		if (!data) return uri;
-		if (data === "yt") {
-			const videoCode = uri.match(/v=([^&]+)/)?.[1];
-			const playlistCode = uri.match(/list=([^&]+)/)?.[1];
-			if (playlistCode) {
-				return `yt:playlist:${playlistCode}`;
-			}
-			return "yt:" + (videoCode ?? "");
-		}
-		return uri;
-	}
-
-	private isLink(link: string) {
-		return /^(https?:\/\/)?(www\.)?([a-zA-Z0-9]+)\.([a-zA-Z0-9]+)\/.+$/.test(link);
-	}
-
-	private regex_link(link: string) {
-		if (this.YOUTUBE_REGEX.test(link)) return "yt";
-		if (this.SOUNDCLOUD_REGEX.test(link)) return "sc";
-		if (this.SPOTIFY_REGEX.test(link)) return "sp";
-		if (this.isLink(link)) return "http";
-		return null;
 	}
 
 	/**
@@ -322,11 +261,16 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 	 * @param tracks
 	 */
 	public decodeTracks(tracks: string[]): Promise<TrackData[]> {
-		return new Promise<TrackData[]>(async (resolve, reject) => {
+		return new Promise(async (resolve, reject) => {
 			const node = this.nodes.first();
 			if (!node) throw new Error("No available nodes.");
+
 			const res = (await node.rest.post("/v4/decodetracks", JSON.stringify(tracks)).catch((err) => reject(err))) as TrackData[];
-			if (!res) return reject(new Error("No data returned from query."));
+
+			if (!res) {
+				return reject(new Error("No data returned from query."));
+			}
+
 			return resolve(res);
 		});
 	}
@@ -434,17 +378,9 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 
 		this.emit("PlayerDisconnect", player, player.voiceChannel);
 		player.voiceChannel = null;
-		player.voiceState = {
-			channel_id: null,
-			guildId: undefined,
-			sessionId: null,
-			event: null,
-			op: "voiceUpdate",
-			session_id: null,
-			user_id: null,
-			guild_id: null,
-		}
-		return player.destroy();
+		player.voiceState = Object.assign({});
+		player.destroy();
+		return;
 	}
 }
 
@@ -482,12 +418,6 @@ export interface ManagerOptions {
 	defaultSearchPlatform?: SearchPlatform;
 	/** Whether the YouTube video titles should be replaced if the Author does not exactly match. */
 	replaceYouTubeCredentials?: boolean;
-	caches: {
-		/** Whether to enable cache. */
-		enabled: boolean;
-		/** Clear cache every second */
-		time: number;
-	}
 	/**
 	 * Function to send data to the websocket.
 	 * @param id
@@ -496,18 +426,13 @@ export interface ManagerOptions {
 	send(id: string, payload: Payload): void;
 }
 
-export type SearchPlatform = "deezer" | "soundcloud" | "youtube music" | "youtube";
-/* The above code is defining a TypeScript type that represents a union of
-string literals. The type can only have one of the specified values:
-"deezer", "soundcloud", "youtube music", or "youtube". */
+export type SearchPlatform = "deezer" | "soundcloud" | "youtube music" | "youtube" | "spotify" | "jiosaavn" | "tidal" | "applemusic" | "bandcamp";
 
 export interface SearchQuery {
 	/** The source to search from. */
-	source?: SearchPlatform;
+	source?: SearchPlatform | string;
 	/** The query to search for. */
 	query: string;
-	requester?: User | ClientUser;
-	cache?: boolean
 }
 
 export interface LavalinkResponse {
@@ -545,7 +470,6 @@ export interface PlaylistData {
 }
 
 export interface ManagerEvents {
-	SearchCacheClear: (data: string) => void;
 	NodeCreate: (node: Node) => void;
 	NodeDestroy: (node: Node) => void;
 	NodeConnect: (node: Node) => void;
