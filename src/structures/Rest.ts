@@ -1,5 +1,5 @@
 import { Node } from "./Node";
-import axios, { AxiosRequestConfig } from "axios";
+import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 
 /** Handles the requests sent to the Lavalink REST API. */
 export class Rest {
@@ -56,7 +56,7 @@ export class Rest {
 		};
 
 		try {
-			const response = await axios(config);
+			const response = await axios(config) as AxiosResponse
 			return response.data;
 		} catch (error) {
 			if (error?.response?.status === 404) {
