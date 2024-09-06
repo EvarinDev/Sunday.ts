@@ -2,10 +2,10 @@
   "name": "sunday.ts",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "version": "1.0.18",
+  "version": "1.1.0",
   "description": "Sunday a lavalink wrapper",
   "license": "MIT",
-  "author": "FAYStarNext",
+  "author": "EwarinDev",
   "scripts": {
     "build:js": "npx babel src --out-dir dist --extensions \".ts,.tsx\" --source-maps inline",
     "lint": "npx eslint src/**/*.ts",
