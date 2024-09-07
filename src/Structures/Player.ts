@@ -4,7 +4,7 @@ import { LavalinkInfo, Node } from "./Node";
 import { Queue } from "./Queue";
 import { Sizes, State, Structure, TrackSourceName, TrackUtils, VoiceState } from "./Utils";
 import * as _ from "lodash";
-import playerCheck from "../utils/playerCheck";
+import playerCheck from "../Utils/PlayerCheck";
 import { ClientUser, Message, User } from "discord.js";
 
 export class Player {
@@ -545,9 +545,7 @@ export class Player {
 		if (!this.queue.current) return undefined;
 		position = Number(position);
 
-		if (isNaN(position)) {
-			throw new RangeError("Position must be a number.");
-		}
+		if (isNaN(position)) throw new RangeError("Position must be a number.");
 		if (position < 0 || position > this.queue.current.duration) position = Math.max(Math.min(position, this.queue.current.duration), 0);
 
 		this.position = position;

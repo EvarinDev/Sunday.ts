@@ -1,6 +1,6 @@
-import { PlayerOptions } from "../structures/Player";
+import { PlayerOptions } from "../Structures/Player";
 
-export default function playerCheck(options: PlayerOptions) {
+export default function PlayerCheck(options: PlayerOptions) {
 	if (!options) throw new TypeError("PlayerOptions must not be empty.");
 
 	const { guild, node, selfDeafen, selfMute, textChannel, voiceChannel, volume } = options;

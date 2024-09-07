@@ -1,6 +1,6 @@
-import { NodeOptions } from "../structures/Node";
+import { NodeOptions } from "../Structures/Node";
 
-export default function nodeCheck(options: NodeOptions) {
+export default function NodeCheck(options: NodeOptions) {
 	if (!options) throw new TypeError("NodeOptions must not be empty.");
 
 	const { host, identifier, password, port, requestTimeout, resumeStatus, resumeTimeout, retryAmount, retryDelay, secure, priority } = options;

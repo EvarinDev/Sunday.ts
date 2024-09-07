@@ -44,7 +44,7 @@ export class Rest {
 	}
 
 	/* Sends a GET request to the specified endpoint and returns the response data. */
-	private async request(method: string, endpoint: string, body?: unknown): Promise<unknown> {
+	private async request(method: Method, endpoint: string, body?: unknown): Promise<unknown> {
 		const config: AxiosRequestConfig = {
 			method,
 			url: this.url + endpoint,
@@ -63,7 +63,6 @@ export class Rest {
 				this.node.destroy();
 				this.node.manager.createNode(this.node.options).connect();
 			}
-
 			return null;
 		}
 	}
@@ -118,3 +117,5 @@ interface playOptions {
 		noReplace?: boolean;
 	};
 }
+
+export type Method = "GET" | "POST" | "PATCH" | "DELETE";

@@ -14,11 +14,10 @@ import {
 	WebSocketClosedEvent,
 } from "./Utils";
 import { Collection } from "@discordjs/collection";
-import { EventEmitter } from "events";
 import { Node, NodeOptions } from "./Node";
 import { Player, PlayerOptions, Track, UnresolvedTrack } from "./Player";
 import { VoiceState } from "..";
-import managerCheck from "../utils/managerCheck";
+import managerCheck from "../Utils/ManagerCheck";
 import { ClientUser, User } from "discord.js";
 import { TypedEmitter } from "tiny-typed-emitter";
 
@@ -176,7 +175,7 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 			throw new Error("No available nodes.");
 		}
 		if (this.options.caches.enabled && this.options.caches.time > 0 && typeof query === "string") {
-			let data = this.caches.get(query);
+			const data = this.caches.get(query);
 			if (data) return data;
 		}
 		const _query: SearchQuery = typeof query === "string" ? { query } : query;
@@ -421,7 +420,7 @@ export interface ManagerOptions {
 	defaultSearchPlatform?: SearchPlatform;
 	/** Whether the YouTube video titles should be replaced if the Author does not exactly match. */
 	replaceYouTubeCredentials?: boolean;
-	caches?: {
+	caches: {
 		/** Whether to cache the search results. */
 		enabled: boolean;
 		/** The time to cache the search results. */

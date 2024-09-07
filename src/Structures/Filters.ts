@@ -1,14 +1,14 @@
-import { Band, bassBoostEqualizer, softEqualizer, trebleBassEqualizer, tvEqualizer, vaporwaveEqualizer } from "../utils/filtersEqualizers";
+import { Band, bassBoostEqualizer, softEqualizer, trebleBassEqualizer, tvEqualizer, vaporwaveEqualizer } from "../Utils/FiltersEqualizers";
 import { Player } from "./Player";
 
 export class Filters {
-	public distortion: distortionOptions | null;
+	public distortion: DistortionOptions | null;
 	public equalizer: Band[];
-	public karaoke: karaokeOptions | null;
+	public karaoke: KaraokeOptions | null;
 	public player: Player;
-	public rotation: rotationOptions | null;
-	public timescale: timescaleOptions | null;
-	public vibrato: vibratoOptions | null;
+	public rotation: RotationOptions | null;
+	public timescale: TimescaleOptions | null;
+	public vibrato: VibratoOptions | null;
 	public volume: number;
 
 	private filterStatus: {
@@ -68,7 +68,7 @@ export class Filters {
 		return this;
 	}
 
-	private setFilterStatus(filter: keyof availableFilters, status: boolean): this {
+	private setFilterStatus(filter: keyof AvailableFilters, status: boolean): this {
 		this.filterStatus[filter] = status;
 		return this;
 	}
@@ -144,7 +144,7 @@ export class Filters {
 	}
 
 	/** Applies the karaoke options specified by the filter. */
-	public setKaraoke(karaoke?: karaokeOptions): this {
+	public setKaraoke(karaoke?: KaraokeOptions): this {
 		return this.applyFilter({
 			property: "karaoke",
 			value: karaoke,
@@ -152,22 +152,22 @@ export class Filters {
 	}
 
 	/** Applies the timescale options specified by the filter. */
-	public setTimescale(timescale?: timescaleOptions): this {
+	public setTimescale(timescale?: TimescaleOptions): this {
 		return this.applyFilter({ property: "timescale", value: timescale });
 	}
 
 	/** Applies the vibrato options specified by the filter. */
-	public setVibrato(vibrato?: vibratoOptions): this {
+	public setVibrato(vibrato?: VibratoOptions): this {
 		return this.applyFilter({ property: "vibrato", value: vibrato });
 	}
 
 	/** Applies the rotation options specified by the filter. */
-	public setRotation(rotation?: rotationOptions): this {
+	public setRotation(rotation?: RotationOptions): this {
 		return this.applyFilter({ property: "rotation", value: rotation });
 	}
 
 	/** Applies the distortion options specified by the filter. */
-	public setDistortion(distortion?: distortionOptions): this {
+	public setDistortion(distortion?: DistortionOptions): this {
 		return this.applyFilter({ property: "distortion", value: distortion });
 	}
 
@@ -199,13 +199,13 @@ export class Filters {
 	}
 
 	/** Returns the status of the specified filter . */
-	public getFilterStatus(filter: keyof availableFilters): boolean {
+	public getFilterStatus(filter: keyof AvailableFilters): boolean {
 		return this.filterStatus[filter];
 	}
 }
 
 /** Options for adjusting the timescale of audio. */
-interface timescaleOptions {
+interface TimescaleOptions {
 	/** The speed factor for the timescale. */
 	speed?: number;
 	/** The pitch factor for the timescale. */
@@ -215,7 +215,7 @@ interface timescaleOptions {
 }
 
 /** Options for applying vibrato effect to audio. */
-interface vibratoOptions {
+interface VibratoOptions {
 	/** The frequency of the vibrato effect. */
 	frequency: number;
 	/** * The depth of the vibrato effect.*/
@@ -223,13 +223,13 @@ interface vibratoOptions {
 }
 
 /** Options for applying rotation effect to audio. */
-interface rotationOptions {
+interface RotationOptions {
 	/** The rotation speed in Hertz (Hz). */
 	rotationHz: number;
 }
 
 /** Options for applying karaoke effect to audio. */
-interface karaokeOptions {
+interface KaraokeOptions {
 	/** The level of karaoke effect. */
 	level?: number;
 	/** The mono level of karaoke effect. */
@@ -240,7 +240,7 @@ interface karaokeOptions {
 	filterWidth?: number;
 }
 
-interface distortionOptions {
+interface DistortionOptions {
 	sinOffset?: number;
 	sinScale?: number;
 	cosOffset?: number;
@@ -251,7 +251,7 @@ interface distortionOptions {
 	scale?: number;
 }
 
-interface availableFilters {
+interface AvailableFilters {
 	bassboost: boolean;
 	distort: boolean;
 	eightD: boolean;
