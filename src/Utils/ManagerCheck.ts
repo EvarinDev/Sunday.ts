@@ -1,9 +1,9 @@
-import { ManagerOptions } from "../structures/Manager";
+import { ManagerOptions } from "../Structures/Manager";
 
 export default function ManagerCheck(options: ManagerOptions) {
 	if (!options) throw new TypeError("ManagerOptions must not be empty.");
 
-	const { autoPlay, clientId, clientName, defaultSearchPlatform, nodes, plugins, send, shards, trackPartial, usePriority, useNode, replaceYouTubeCredentials } =
+	const { autoPlay, clientId, clientName, defaultSearchPlatform, nodes, plugins, send, shards, trackPartial, usePriority, useNode, replaceYouTubeCredentials, caches } =
 		options;
 
 	if (typeof autoPlay !== "undefined" && typeof autoPlay !== "boolean") {
@@ -17,7 +17,9 @@ export default function ManagerCheck(options: ManagerOptions) {
 	if (typeof clientName !== "undefined" && typeof clientName !== "string") {
 		throw new TypeError('Manager option "clientName" must be a string.');
 	}
-
+	if (typeof caches !== "undefined" && typeof caches !== "object") {
+		throw new TypeError('Manager option "caches" must be a object.');
+	}
 	if (typeof defaultSearchPlatform !== "undefined" && typeof defaultSearchPlatform !== "string") {
 		throw new TypeError('Manager option "defaultSearchPlatform" must be a string.');
 	}

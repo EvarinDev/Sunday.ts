@@ -1,4 +1,4 @@
-import { Band, bassBoostEqualizer, softEqualizer, trebleBassEqualizer, tvEqualizer, vaporwaveEqualizer } from "../utils/FiltersEqualizers";
+import { Band, bassBoostEqualizer, softEqualizer, trebleBassEqualizer, tvEqualizer, vaporwaveEqualizer } from "../Utils/FiltersEqualizers";
 import { Player } from "./Player";
 
 export class Filters {

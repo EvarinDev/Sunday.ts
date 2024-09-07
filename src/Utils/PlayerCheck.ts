@@ -1,4 +1,4 @@
-import { PlayerOptions } from "../structures/Player";
+import { PlayerOptions } from "../Structures/Player";
 
 export default function PlayerCheck(options: PlayerOptions) {
 	if (!options) throw new TypeError("PlayerOptions must not be empty.");

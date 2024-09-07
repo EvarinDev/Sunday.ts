@@ -17,7 +17,7 @@ import { Collection } from "@discordjs/collection";
 import { Node, NodeOptions } from "./Node";
 import { Player, PlayerOptions, Track, UnresolvedTrack } from "./Player";
 import { VoiceState } from "..";
-import managerCheck from "../utils/ManagerCheck";
+import managerCheck from "../Utils/ManagerCheck";
 import { ClientUser, User } from "discord.js";
 import { TypedEmitter } from "tiny-typed-emitter";
 
@@ -420,7 +420,7 @@ export interface ManagerOptions {
 	defaultSearchPlatform?: SearchPlatform;
 	/** Whether the YouTube video titles should be replaced if the Author does not exactly match. */
 	replaceYouTubeCredentials?: boolean;
-	caches?: {
+	caches: {
 		/** Whether to cache the search results. */
 		enabled: boolean;
 		/** The time to cache the search results. */
