@@ -128,7 +128,6 @@ export class Node {
 		if (players.size) players.forEach((p) => p.destroy());
 
 		this.socket.close(1000, "destroy");
-		// @ts-ignore
 		this.socket.removeAllListeners();
 		this.socket = null;
 
@@ -147,7 +146,6 @@ export class Node {
 				this.manager.emit("NodeError", this, error);
 				return this.destroy();
 			}
-			// @ts-ignore
 			this.socket?.removeAllListeners();
 			this.socket = null;
 			this.manager.emit("NodeReconnect", this);
