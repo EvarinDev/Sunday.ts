@@ -14,7 +14,6 @@ import {
 	WebSocketClosedEvent,
 } from "./Utils";
 import { Collection } from "@discordjs/collection";
-import { EventEmitter } from "events";
 import { Node, NodeOptions } from "./Node";
 import { Player, PlayerOptions, Track, UnresolvedTrack } from "./Player";
 import { VoiceState } from "..";
@@ -176,7 +175,7 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 			throw new Error("No available nodes.");
 		}
 		if (this.options.caches.enabled && this.options.caches.time > 0 && typeof query === "string") {
-			let data = this.caches.get(query);
+			const data = this.caches.get(query);
 			if (data) return data;
 		}
 		const _query: SearchQuery = typeof query === "string" ? { query } : query;
