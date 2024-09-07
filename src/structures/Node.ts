@@ -12,7 +12,7 @@ import {
 import { LavalinkResponse, Manager, PlaylistRawData } from "./Manager";
 import { Player, Track, UnresolvedTrack } from "./Player";
 import { Rest } from "./Rest";
-import nodeCheck from "../utils/nodeCheck";
+import nodeCheck from "../utils/NodeCheck";
 import WebSocket from "ws";
 
 export class Node {

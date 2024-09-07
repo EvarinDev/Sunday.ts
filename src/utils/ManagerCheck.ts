@@ -1,6 +1,6 @@
 import { ManagerOptions } from "../structures/Manager";
 
-export default function managerCheck(options: ManagerOptions) {
+export default function ManagerCheck(options: ManagerOptions) {
 	if (!options) throw new TypeError("ManagerOptions must not be empty.");
 
 	const { autoPlay, clientId, clientName, defaultSearchPlatform, nodes, plugins, send, shards, trackPartial, usePriority, useNode, replaceYouTubeCredentials } =

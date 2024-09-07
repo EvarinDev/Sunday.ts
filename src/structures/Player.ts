@@ -4,7 +4,7 @@ import { LavalinkInfo, Node } from "./Node";
 import { Queue } from "./Queue";
 import { Sizes, State, Structure, TrackSourceName, TrackUtils, VoiceState } from "./Utils";
 import * as _ from "lodash";
-import playerCheck from "../utils/playerCheck";
+import playerCheck from "../utils/PlayerCheck";
 import { ClientUser, Message, User } from "discord.js";
 
 export class Player {

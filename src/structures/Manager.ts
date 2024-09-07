@@ -17,7 +17,7 @@ import { Collection } from "@discordjs/collection";
 import { Node, NodeOptions } from "./Node";
 import { Player, PlayerOptions, Track, UnresolvedTrack } from "./Player";
 import { VoiceState } from "..";
-import managerCheck from "../utils/managerCheck";
+import managerCheck from "../utils/ManagerCheck";
 import { ClientUser, User } from "discord.js";
 import { TypedEmitter } from "tiny-typed-emitter";
 
