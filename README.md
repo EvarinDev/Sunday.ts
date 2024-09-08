@@ -165,6 +165,7 @@ client.login(process.env.TOKEN);
 - [MagmaStream](https://github.com/Blackfort-Hosting/magmastream/)
 
 ## Star History
-[![Star History Chart](https://api.star-history.com/svg?repos=EwarinDev/DiscordStatusProfile&type=Date)](https://star-history.com/#EwarinDev/DiscordStatusProfile&Date)
+
+[![Star History Chart](https://api.star-history.com/svg?repos=EvarinDev/Sunday.ts&type=Date)](https://star-history.com/#EvarinDev/Sunday.ts&Date)
 
 See also the list of [contributors](https://github.com/FAYStarNext/Sunday.ts/contributors) who participated in this project.
