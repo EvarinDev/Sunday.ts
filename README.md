@@ -27,7 +27,6 @@
   - [Installing](#installing)
 - [Features](#features)
 - [🎈 Usage ](#-usage-)
-- [⛏️ Built Using ](#️-built-using-)
 - [Credits](#credits)
 
 ## 🧐 About <a name = "about"></a>
@@ -82,7 +81,7 @@ let manager = new Manager({
             resumeStatus: true,
         },
     ],
-     cache: {
+    caches: {
         enabled: true,
         time: 60000,
     },
@@ -160,12 +159,12 @@ client.on("ready" , () => {
 client.login(process.env.TOKEN);
 ```
 
-## ⛏️ Built Using <a name = "built_using"></a>
-
-- [WebSocket](https://github.com/websockets/ws) - WebSocket Client
 ## Credits
 
 - [Erela.Js](https://github.com/MenuDocs/erela.js)
 - [MagmaStream](https://github.com/Blackfort-Hosting/magmastream/)
+
+## Star History
+[![Star History Chart](https://api.star-history.com/svg?repos=EwarinDev/DiscordStatusProfile&type=Date)](https://star-history.com/#EwarinDev/DiscordStatusProfile&Date)
 
 See also the list of [contributors](https://github.com/FAYStarNext/Sunday.ts/contributors) who participated in this project.

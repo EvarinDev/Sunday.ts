@@ -119,7 +119,7 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 			shards: 1,
 			autoPlay: true,
 			usePriority: false,
-			clientName: "Sunday.ts (https://github.com/EwarinDev/Sunday.ts)",
+			clientName: "Sunday.ts (https://github.com/EvarinDev/Sunday.ts)",
 			defaultSearchPlatform: "youtube",
 			useNode: "leastPlayers",
 			...options,
@@ -190,10 +190,7 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 
 		try {
 			const res = (await node.rest.get(`/v4/loadtracks?identifier=${encodeURIComponent(search)}`)) as LavalinkResponse;
-
-			if (!res) {
-				throw new Error("Query not found.");
-			}
+			if (!res) throw new Error("Query not found.");
 
 			let searchData = [];
 			let playlistData: PlaylistRawData | undefined;
