@@ -226,7 +226,7 @@ export type Sizes = "0" | "1" | "2" | "3" | "default" | "mqdefault" | "hqdefault
 
 export type LoadType = "track" | "playlist" | "search" | "empty" | "error";
 
-export type State = "CONNECTED" | "CONNECTING" | "DISCONNECTED" | "DISCONNECTING" | "DESTROYING";
+export type State = "CONNECTED" | "CONNECTING" | "DISCONNECTED" | "DISCONNECTING" | "DESTROYING" | "MOVING";
 
 export type PlayerEvents = TrackStartEvent | TrackEndEvent | TrackStuckEvent | TrackExceptionEvent | WebSocketClosedEvent;
 

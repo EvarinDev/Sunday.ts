@@ -47,7 +47,7 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 	public caches = new Collection<string, SearchResult>();
 
 	/** Returns the nodes that has the least load. */
-	private get leastLoadNode(): Collection<string, Node> {
+	public get leastLoadNode(): Collection<string, Node> {
 		return this.nodes
 			.filter((node) => node.connected)
 			.sort((a, b) => {
@@ -138,6 +138,9 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 				this.nodes.set(node.options.identifier, node);
 			}
 		}
+		setInterval(() => {
+			this.caches.clear();
+		}, this.options.caches.time);
 	}
 
 	/**

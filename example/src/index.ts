@@ -90,9 +90,6 @@ client.on("messageCreate", async (message) => {
         await handlePlayCommand(message, args);
     }
 });
-manager.on("SearchCacheClear" , (data) => {
-    console.log(`Cache cleared: ${data}`);
-});
 client.on("raw", (data) => manager.updateVoiceState(data));
 client.on("ready" , () => {
     manager.init(client.user?.id as string);
