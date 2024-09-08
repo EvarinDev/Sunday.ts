@@ -208,9 +208,9 @@ export class Plugin {
 }
 
 const structures = {
-	Player: (await import("./Player")).Player,
-	Queue: (await import("./Queue")).Queue,
-	Node: (await import("./Node")).Node,
+	Player: require("./Player").Player,
+	Queue: require("./Queue").Queue,
+	Node: require("./Node").Node,
 };
 
 export interface UnresolvedQuery {

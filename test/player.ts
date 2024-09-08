@@ -1,5 +1,5 @@
 import { Client } from "discord.js";
-import { Manager } from "../src/structures/Manager";
+import { Manager } from "../src";
 
 let client = new Client({
     intents: [
@@ -13,8 +13,8 @@ let client = new Client({
 let manager = new Manager({
     nodes: [
         {
-            host: 'localhost',
-            port: 2333,
+            host: 'lavalink.jirayu.net',
+            port: 13592,
             password: 'youshallnotpass',
         },
     ],

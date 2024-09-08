@@ -1,4 +1,4 @@
-import { Manager } from "../src/structures/Manager";
+import { Manager } from "../src";
 
 let client = new Manager({
     nodes: [
