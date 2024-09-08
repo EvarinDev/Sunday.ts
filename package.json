@@ -2,7 +2,7 @@
   "name": "sunday.ts",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Sunday a lavalink wrapper",
   "license": "MIT",
   "author": "EwarinDev",
@@ -28,9 +28,9 @@
     "access": "public"
   },
   "bugs": {
-    "url": "https://github.com/FAYStarNext/Sunday.ts/issues"
+    "url": "https://github.com/EwarinDev/Sunday.ts/issues"
   },
-  "homepage": "https://github.com/FAYStarNext/Sunday.ts#readme",
+  "homepage": "https://github.com/EwarinDev/Sunday.ts#readme",
   "peerDependencies": {
     "typescript": "^5.5.4"
   },
