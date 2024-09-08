@@ -47,7 +47,7 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 	public caches = new Collection<string, SearchResult>();
 
 	/** Returns the nodes that has the least load. */
-	private get leastLoadNode(): Collection<string, Node> {
+	public get leastLoadNode(): Collection<string, Node> {
 		return this.nodes
 			.filter((node) => node.connected)
 			.sort((a, b) => {
@@ -119,7 +119,7 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 			shards: 1,
 			autoPlay: true,
 			usePriority: false,
-			clientName: "Sunday.ts (https://github.com/EwarinDev/Sunday.ts)",
+			clientName: "Sunday.ts (https://github.com/EvarinDev/Sunday.ts)",
 			defaultSearchPlatform: "youtube",
 			useNode: "leastPlayers",
 			...options,
@@ -138,6 +138,9 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 				this.nodes.set(node.options.identifier, node);
 			}
 		}
+		setInterval(() => {
+			this.caches.clear();
+		}, this.options.caches.time);
 	}
 
 	/**
@@ -190,10 +193,7 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 
 		try {
 			const res = (await node.rest.get(`/v4/loadtracks?identifier=${encodeURIComponent(search)}`)) as LavalinkResponse;
-
-			if (!res) {
-				throw new Error("Query not found.");
-			}
+			if (!res) throw new Error("Query not found.");
 
 			let searchData = [];
 			let playlistData: PlaylistRawData | undefined;

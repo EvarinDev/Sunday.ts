@@ -86,12 +86,14 @@ client.on("messageCreate", async (message) => {
     if (message.author.bot) return;
     
     const [command, ...args] = message.content.slice(0).split(/\s+/g);
-    if (command === 'play') {
-        await handlePlayCommand(message, args);
+    switch (command) {
+        case 'play':
+            return handlePlayCommand(message, args);
+        case 'moveNode':
+            let player = manager.players.get(message.guild?.id as string);
+            player?.moveNode(args[0]);
+            return message.reply(`Node ${player?.node.options.identifier} moved to ${args[0]}`);
     }
-});
-manager.on("SearchCacheClear" , (data) => {
-    console.log(`Cache cleared: ${data}`);
 });
 client.on("raw", (data) => manager.updateVoiceState(data));
 client.on("ready" , () => {

@@ -135,6 +135,69 @@ export class Player {
 		return this;
 	}
 
+	/**
+	 * Moves the player to a different node.
+	 *
+	 * @param {string} [node] - The ID of the node to move to.
+	 * @returns {this} - The player instance.
+	 */
+	public async moveNode(node?: string): Promise<this> {
+		node = node || this.manager.leastLoadNode.first().options.identifier || this.manager.nodes.filter((n) => n.connected).first().options.identifier;
+		if (!this.manager.nodes.has(node)) throw new RangeError("No nodes available.");
+		if (this.node.options.identifier === node) return this;
+
+		const destroyOldNode = async (node: Node) => {
+			this.state = "MOVING";
+
+			if (this.manager.nodes.get(node.options.identifier) && this.manager.nodes.get(node.options.identifier).connected) await node.rest.destroyPlayer(this.guild);
+
+			setTimeout(() => (this.state = "CONNECTED"), 5000);
+		};
+
+		const currentNode = this.node;
+		const destinationNode = this.manager.nodes.get(node);
+		let position = this.position;
+
+		if (currentNode.connected) {
+			const fetchedPlayer: any = await currentNode.rest.get(`/v4/sessions/${currentNode.sessionId}/players/${this.guild}`);
+			position = fetchedPlayer.track.info.position;
+		}
+
+		await destinationNode.rest.updatePlayer({
+			guildId: this.guild,
+			data: {
+				encodedTrack: this.queue.current?.track,
+				position: position,
+				volume: this.volume,
+				paused: this.paused,
+				filters: {
+					distortion: this.filters.distortion,
+					equalizer: this.filters.equalizer,
+					karaoke: this.filters.karaoke,
+					rotation: this.filters.rotation,
+					timescale: this.filters.timescale,
+					vibrato: this.filters.vibrato,
+					volume: this.filters.volume,
+				},
+			},
+		});
+
+		await destinationNode.rest.updatePlayer({
+			guildId: this.guild,
+			data: {
+				voice: {
+					token: this.voiceState.event.token,
+					endpoint: this.voiceState.event.endpoint,
+					sessionId: this!.voiceState?.sessionId!,
+				},
+			},
+		});
+
+		this.node = destinationNode;
+		destroyOldNode(currentNode);
+		return this;
+	}
+
 	/** Disconnect from the voice channel. */
 	public disconnect(): this {
 		if (this.voiceChannel === null) return this;
