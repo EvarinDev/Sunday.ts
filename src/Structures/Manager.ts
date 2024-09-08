@@ -97,11 +97,10 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 		super();
 
 		managerCheck(options);
-
 		Structure.get("Player").init(this);
 		Structure.get("Node").init(this);
 		TrackUtils.init(this);
-
+		
 		if (options.trackPartial) {
 			TrackUtils.setTrackPartial(options.trackPartial);
 			delete options.trackPartial;
@@ -134,7 +133,10 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 		}
 
 		if (this.options.nodes) {
-			for (const nodeOptions of this.options.nodes) new (Structure.get("Node"))(nodeOptions);
+			for (const nodeOptions of this.options.nodes) {
+				const node = new (Structure.get("Node"))(nodeOptions);
+				this.nodes.set(node.options.identifier, node);
+			}
 		}
 	}
 
@@ -263,17 +265,18 @@ export class Manager extends TypedEmitter<ManagerEvents> {
 	 * @param tracks
 	 */
 	public decodeTracks(tracks: string[]): Promise<TrackData[]> {
-		return new Promise(async (resolve, reject) => {
+		return new Promise(async(resolve, reject) => {
 			const node = this.nodes.first();
-			if (!node) throw new Error("No available nodes.");
-
-			const res = (await node.rest.post("/v4/decodetracks", JSON.stringify(tracks)).catch((err) => reject(err))) as TrackData[];
-
-			if (!res) {
-				return reject(new Error("No data returned from query."));
+			if (!node) {
+				return reject(new Error("No available nodes."));
 			}
-
-			return resolve(res);
+	
+			await node.rest.post("/v4/decodetracks", JSON.stringify(tracks))
+				.then((res) => {
+					if (!res) return reject(new Error("No data returned from query."));
+					resolve(res as TrackData[]);
+				})
+				.catch((err) => reject(err));
 		});
 	}
 
