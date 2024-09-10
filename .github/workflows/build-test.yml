@@ -29,6 +29,6 @@ jobs:
         run: bun install
 
       - name: Build
-        id: ts-build
-      - run: bun x tsc
+        id: bun-build
+        run: bun x tsc
       - run: bun run build:js
